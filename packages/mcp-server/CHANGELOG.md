@@ -1,5 +1,15 @@
 # @aas-ai-editor/mcp-server
 
+## 0.3.4
+
+### Patch Changes
+
+- fix: improve format detection, rate limiting proxy support, and import paths
+  - Add ZIP magic bytes detection for AASX format verification
+  - Remove hardcoded xForwardedForHeader:false to respect TRUST_PROXY setting
+  - Add TRUST_PROXY environment variable documentation
+  - Use dynamic submodel lookup in import_pdf when targetSubmodel is specified
+
 ## 0.3.1
 
 ### Patch Changes
