@@ -1,6 +1,6 @@
 {
   "name": "@aas-ai-editor/core",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Core AASX parsing, patch operations, and validation for AAS AI Editor",
   "type": "module",
   "main": "./dist/index.js",

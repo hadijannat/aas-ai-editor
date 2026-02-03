@@ -1,5 +1,13 @@
 # @aas-ai-editor/mcp-server
 
+## 0.2.2
+
+### Patch Changes
+
+- 61e0f0e: Fix repository URLs in package.json to point to correct GitHub repo (hadijannat/aas-ai-editor)
+- Updated dependencies [61e0f0e]
+  - @aas-ai-editor/core@0.2.2
+
 ## 0.2.1
 
 ### Patch Changes
