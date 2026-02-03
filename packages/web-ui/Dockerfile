@@ -6,8 +6,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Install pnpm (version from packageManager in package.json)
+RUN corepack enable
 
 # Copy workspace files
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./

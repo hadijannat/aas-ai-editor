@@ -6,8 +6,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Install pnpm (version from packageManager in package.json)
+RUN corepack enable
 
 # Copy workspace files
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
@@ -31,16 +31,16 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Install pnpm (version from packageManager in package.json)
+RUN corepack enable
 
-# Copy package files
+# Copy package files and node_modules from builder
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/core/package.json ./packages/core/
 COPY packages/mcp-server/package.json ./packages/mcp-server/
-
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/core/node_modules ./packages/core/node_modules
+COPY --from=builder /app/packages/mcp-server/node_modules ./packages/mcp-server/node_modules
 
 # Copy built files
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
