@@ -11,6 +11,9 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  before: undefined,
+  after: undefined,
+  label: undefined,
   depth: 0,
   maxDepth: 4,
 });

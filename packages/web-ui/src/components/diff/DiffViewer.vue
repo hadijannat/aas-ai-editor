@@ -7,7 +7,6 @@ import {
   describeOp,
   formatPath,
   getValueAtPath,
-  getPatchDisplay,
 } from '@/utils/diff';
 
 interface Props {
@@ -17,6 +16,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  document: undefined,
   collapsed: true,
 });
 

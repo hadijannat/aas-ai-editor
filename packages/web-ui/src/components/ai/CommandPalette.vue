@@ -321,7 +321,7 @@ onUnmounted(() => {
               <div class="command-group">
                 <div class="group-label">{{ categoryLabels[category] || category }}</div>
                 <div
-                  v-for="(command, index) in cmds"
+                  v-for="command in cmds"
                   :key="command.id"
                   class="command-item"
                   :class="{

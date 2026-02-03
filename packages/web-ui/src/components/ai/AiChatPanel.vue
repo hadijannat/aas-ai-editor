@@ -5,7 +5,7 @@
  * Conversational interface for AI-assisted editing.
  * Supports natural language queries and multi-turn conversations.
  */
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { useMcpService } from '@/services/mcp';
 import { useDocumentStore } from '@/stores/document';
 import { storeToRefs } from 'pinia';
@@ -26,7 +26,7 @@ interface ToolCall {
   status: 'pending' | 'success' | 'error';
 }
 
-const props = defineProps<{
+defineProps<{
   collapsed?: boolean;
 }>();
 

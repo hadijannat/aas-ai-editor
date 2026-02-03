@@ -792,7 +792,7 @@ const selfCorrectingLoop: ToolDefinition = {
     }
 
     const iterations: LoopIteration[] = [];
-    let currentEnv = session.documentState.environment as Environment;
+    const currentEnv = session.documentState.environment as Environment;
     let allGeneratedPatches: AasPatchOp[] = [];
     let totalFixesApplied = 0;
 

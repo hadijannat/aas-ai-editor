@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useDocumentStore } from '@/stores/document';
 import { useSelectionStore } from '@/stores/selection';
 import { useMcpService } from '@/services/mcp';
