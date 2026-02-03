@@ -60,14 +60,14 @@
   ],
   "author": "AAS AI Editor Contributors",
   "license": "MIT",
-  "homepage": "https://github.com/aas-ai-editor/aas-ai-editor#readme",
+  "homepage": "https://github.com/hadijannat/aas-ai-editor#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aas-ai-editor/aas-ai-editor.git",
+    "url": "git+https://github.com/hadijannat/aas-ai-editor.git",
     "directory": "packages/core"
   },
   "bugs": {
-    "url": "https://github.com/aas-ai-editor/aas-ai-editor/issues"
+    "url": "https://github.com/hadijannat/aas-ai-editor/issues"
   },
   "dependencies": {
     "fast-json-patch": "^3.1.1",
