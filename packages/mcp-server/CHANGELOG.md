@@ -1,5 +1,15 @@
 # @aas-ai-editor/mcp-server
 
+## 0.3.0
+
+### Minor Changes
+
+- Add API key configuration in Settings UI
+  - Users can now configure their Anthropic API key directly in the Settings page
+  - API key is stored in localStorage and sent via X-Anthropic-Api-Key header
+  - MCP server accepts API key from request headers, falling back to environment variable
+  - Added .env.example documenting server configuration options
+
 ## 0.2.2
 
 ### Patch Changes
