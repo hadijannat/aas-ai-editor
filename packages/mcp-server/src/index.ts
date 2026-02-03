@@ -22,10 +22,32 @@ export type {
 export { loadConfig, validateConfig } from './config/index.js';
 export type { ServerConfig } from './config/index.js';
 
+// Security
+export {
+  createAuthMiddleware,
+  loadApiKeysFromEnv,
+  hashApiKey,
+  type AuthConfig,
+} from './security/auth.js';
+export {
+  validatePath,
+  isPathSafe,
+  createPathValidator,
+  loadAllowedDirectoriesFromEnv,
+  type PathConfig,
+} from './security/paths.js';
+export {
+  validateToolInput,
+  createInputValidator,
+  schemas as validationSchemas,
+  toolSchemas,
+} from './security/validation.js';
+
 // Types
 export type {
   ServerContext,
   SessionData,
+  ClientIdentity,
   DocumentState,
   PendingOperation,
   ToolDefinition,

@@ -16,6 +16,17 @@ export interface ServerContext {
 }
 
 /**
+ * Client identity for session binding
+ */
+export interface ClientIdentity {
+  /** Client IP address */
+  ip: string;
+
+  /** User-Agent header */
+  userAgent: string;
+}
+
+/**
  * Session data stored per client connection
  */
 export interface SessionData {
@@ -27,6 +38,9 @@ export interface SessionData {
 
   /** Last activity timestamp */
   lastActivityAt: Date;
+
+  /** Client identity (for session binding) */
+  clientIdentity?: ClientIdentity;
 
   /** Currently loaded document ID */
   documentId?: string;

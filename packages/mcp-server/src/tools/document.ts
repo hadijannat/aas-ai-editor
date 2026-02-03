@@ -17,6 +17,7 @@ import {
   type Environment,
 } from '@aas-ai-editor/core';
 import type { ToolDefinition, ToolResult } from '../types.js';
+import { createPathValidator } from '../security/paths.js';
 
 /**
  * Undo entry stored on the undo stack
@@ -50,11 +51,24 @@ const loadDocument: ToolDefinition = {
     const { path: filePath } = params as { path: string };
     const { logger, session } = context;
 
-    logger.info({ path: filePath }, 'Loading document');
+    // Validate path for security
+    const pathValidator = createPathValidator();
+    const pathValidation = pathValidator.validate(filePath);
+
+    if (!pathValidation.valid) {
+      logger.warn({ path: filePath, error: pathValidation.error }, 'Path validation failed');
+      return {
+        success: false,
+        error: pathValidation.error,
+      };
+    }
+
+    const safePath = pathValidation.normalizedPath!;
+    logger.info({ path: safePath }, 'Loading document');
 
     try {
       // Read the file from disk
-      const fileData = await fs.readFile(filePath);
+      const fileData = await fs.readFile(safePath);
 
       // Detect JSON vs AASX
       const isJson = filePath.endsWith('.json') || fileData[0] === 0x7b; // 0x7b = '{'
@@ -172,14 +186,27 @@ const saveDocument: ToolDefinition = {
       };
     }
 
-    logger.info({ outputPath }, 'Saving document');
+    // Validate output path for security
+    const pathValidator = createPathValidator();
+    const pathValidation = pathValidator.validate(outputPath);
+
+    if (!pathValidation.valid) {
+      logger.warn({ path: outputPath, error: pathValidation.error }, 'Path validation failed');
+      return {
+        success: false,
+        error: pathValidation.error,
+      };
+    }
+
+    const safePath = pathValidation.normalizedPath!;
+    logger.info({ outputPath: safePath }, 'Saving document');
 
     try {
       const environment = session.documentState.environment as Environment;
 
       // Determine output format from path extension or source format
-      const isJsonOutput = outputPath.endsWith('.json') ||
-        (session.documentState.sourceFormat === 'json' && !outputPath.endsWith('.aasx'));
+      const isJsonOutput = safePath.endsWith('.json') ||
+        (session.documentState.sourceFormat === 'json' && !safePath.endsWith('.aasx'));
 
       let outputData: Buffer | Uint8Array;
       let size: number;
@@ -189,29 +216,29 @@ const saveDocument: ToolDefinition = {
         const jsonContent = JSON.stringify(environment, null, 2);
         outputData = Buffer.from(jsonContent, 'utf-8');
         size = outputData.byteLength;
-        logger.info({ outputPath, format: 'json' }, 'Saving as JSON');
+        logger.info({ outputPath: safePath, format: 'json' }, 'Saving as JSON');
       } else {
         // Write as AASX using core library, preserving supplementary files
         const aasxData = await writeAasx(environment, {
-          filename: path.basename(outputPath).replace(/\.aasx$/, '.json'),
+          filename: path.basename(safePath).replace(/\.aasx$/, '.json'),
           supplementaryFiles: session.documentState.supplementaryFiles,
         });
         outputData = aasxData;
         size = aasxData.byteLength;
-        logger.info({ outputPath, format: 'aasx' }, 'Saving as AASX');
+        logger.info({ outputPath: safePath, format: 'aasx' }, 'Saving as AASX');
       }
 
       // Write to disk
-      await fs.writeFile(outputPath, outputData);
+      await fs.writeFile(safePath, outputData);
 
       // Update state
       session.documentState.dirty = false;
-      session.documentId = outputPath;
+      session.documentId = safePath;
 
       return {
         success: true,
         data: {
-          path: outputPath,
+          path: safePath,
           size,
           format: isJsonOutput ? 'json' : 'aasx',
           message: 'Document saved successfully',
@@ -219,7 +246,7 @@ const saveDocument: ToolDefinition = {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error saving document';
-      logger.error({ error, outputPath }, 'Failed to save document');
+      logger.error({ error, outputPath: safePath }, 'Failed to save document');
       return {
         success: false,
         error: message,

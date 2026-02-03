@@ -6,7 +6,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import type { SessionData } from '../types.js';
+import type { SessionData, ClientIdentity } from '../types.js';
 
 /**
  * Session configuration
@@ -20,6 +20,9 @@ export interface SessionConfig {
 
   /** Cleanup interval in milliseconds */
   cleanupIntervalMs: number;
+
+  /** Whether to enforce client identity binding */
+  enforceClientBinding: boolean;
 }
 
 /**
@@ -29,7 +32,16 @@ export const DEFAULT_SESSION_CONFIG: SessionConfig = {
   timeoutMs: 30 * 60 * 1000, // 30 minutes
   maxSessions: 100,
   cleanupIntervalMs: 60 * 1000, // 1 minute
+  enforceClientBinding: true,
 };
+
+/**
+ * Session access result
+ */
+export interface SessionAccessResult {
+  session?: SessionData;
+  error?: string;
+}
 
 /**
  * Session manager for MCP connections
@@ -47,7 +59,7 @@ export class SessionManager {
   /**
    * Create a new session
    */
-  create(): SessionData {
+  create(clientIdentity?: ClientIdentity): SessionData {
     // Check max sessions
     if (this.sessions.size >= this.config.maxSessions) {
       this.evictOldest();
@@ -57,6 +69,7 @@ export class SessionManager {
       id: uuidv4(),
       createdAt: new Date(),
       lastActivityAt: new Date(),
+      clientIdentity,
       pendingOperations: [],
     };
 
@@ -69,6 +82,39 @@ export class SessionManager {
    */
   get(id: string): SessionData | undefined {
     return this.sessions.get(id);
+  }
+
+  /**
+   * Get session with client identity validation
+   * Returns an error if client identity doesn't match
+   */
+  getWithValidation(id: string, clientIdentity?: ClientIdentity): SessionAccessResult {
+    const session = this.sessions.get(id);
+
+    if (!session) {
+      return { error: 'Session not found' };
+    }
+
+    // Skip validation if not enforced or no identity stored
+    if (!this.config.enforceClientBinding || !session.clientIdentity) {
+      return { session };
+    }
+
+    // Skip validation if no identity provided (backwards compatibility)
+    if (!clientIdentity) {
+      return { session };
+    }
+
+    // Validate client identity matches
+    if (session.clientIdentity.ip !== clientIdentity.ip) {
+      return { error: 'Session bound to different IP address' };
+    }
+
+    // User-Agent check is advisory (can change with browser updates)
+    // Log warning but don't reject
+    // if (session.clientIdentity.userAgent !== clientIdentity.userAgent) { ... }
+
+    return { session };
   }
 
   /**

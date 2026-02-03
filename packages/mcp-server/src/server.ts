@@ -16,6 +16,8 @@ import { registerTools } from './tools/index.js';
 import { registerResources } from './resources/index.js';
 import { registerPrompts } from './prompts/index.js';
 import { loadConfig, validateConfig } from './config/index.js';
+import { createAuthMiddleware, loadApiKeysFromEnv } from './security/auth.js';
+import { loadAllowedDirectoriesFromEnv } from './security/paths.js';
 import type { ServerContext } from './types.js';
 
 const logger = pino({
@@ -77,6 +79,25 @@ export async function startServer(): Promise<void> {
     keyGenerator: (req) => req.ip || 'unknown',
   });
   app.use('/mcp', limiter);
+
+  // API Key Authentication
+  const apiKeys = loadApiKeysFromEnv();
+  const authMiddleware = createAuthMiddleware({
+    apiKeys,
+    publicEndpoints: ['/health', '/'],
+    enabled: apiKeys.length > 0, // Only enable if keys are configured
+  });
+  app.use('/mcp', authMiddleware);
+
+  // Log security configuration
+  const allowedDirs = loadAllowedDirectoriesFromEnv();
+  logger.info({
+    authEnabled: apiKeys.length > 0,
+    apiKeyCount: apiKeys.length,
+    allowedDirectories: allowedDirs,
+    corsOrigins: allowedOrigins,
+    rateLimit: process.env.RATE_LIMIT_MAX || '100',
+  }, 'Security configuration loaded');
 
   // Body parser middleware
   app.use(express.json({ limit: '50mb' }));

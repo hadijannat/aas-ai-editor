@@ -6,7 +6,8 @@
  */
 
 import type { Request, Response } from 'express';
-import type { ServerContext, ToolDefinition, ResourceDefinition, PromptDefinition } from '../types.js';
+import type { ServerContext, ToolDefinition, ResourceDefinition, PromptDefinition, ClientIdentity } from '../types.js';
+import { validateToolInput } from '../security/validation.js';
 
 /**
  * Transport handler for MCP Streamable HTTP
@@ -29,6 +30,16 @@ export interface TransportHandler {
 }
 
 /**
+ * Extract client identity from request
+ */
+function extractClientIdentity(req: Request): ClientIdentity {
+  return {
+    ip: req.ip || req.socket.remoteAddress || 'unknown',
+    userAgent: req.headers['user-agent'] || 'unknown',
+  };
+}
+
+/**
  * Create a transport handler
  */
 export function createTransportHandler(context: ServerContext): TransportHandler {
@@ -46,12 +57,32 @@ export function createTransportHandler(context: ServerContext): TransportHandler
     const { logger, sessionManager } = context;
 
     try {
-      // Get or create session
+      // Extract client identity for session binding
+      const clientIdentity = extractClientIdentity(req);
+
+      // Get or create session with client identity validation
       const headerSessionId = req.headers['x-session-id'] as string | undefined;
-      let session = headerSessionId ? sessionManager.get(headerSessionId) : undefined;
+      let session;
+
+      if (headerSessionId) {
+        const result = sessionManager.getWithValidation(headerSessionId, clientIdentity);
+        if (result.error) {
+          logger.warn({ sessionId: headerSessionId, ip: clientIdentity.ip }, result.error);
+          res.status(403).json({
+            jsonrpc: '2.0',
+            id: req.body?.id,
+            error: {
+              code: -32003,
+              message: result.error,
+            },
+          });
+          return;
+        }
+        session = result.session;
+      }
 
       if (!session) {
-        session = sessionManager.create();
+        session = sessionManager.create(clientIdentity);
       }
 
       const sessionId = session.id;
@@ -169,13 +200,34 @@ export function createTransportHandler(context: ServerContext): TransportHandler
       throw new Error('Session required for tool calls');
     }
 
+    // Validate input parameters
+    const toolArgs = params.arguments || {};
+    const validation = validateToolInput(params.name, toolArgs);
+
+    if (!validation.valid) {
+      ctx.logger.warn({ tool: params.name, errors: validation.errors }, 'Tool input validation failed');
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: 'Input validation failed',
+              details: validation.errors,
+            }, null, 2),
+          },
+        ],
+        isError: true,
+      };
+    }
+
     const toolContext = {
       server: ctx,
       session,
       logger: ctx.logger.child({ tool: params.name }),
     };
 
-    const result = await tool.handler(params.arguments || {}, toolContext);
+    const result = await tool.handler(toolArgs, toolContext);
 
     return {
       content: [
