@@ -81,20 +81,24 @@ export const toolSchemas = {
   }),
 
   query_get_by_path: z.object({
-    path: schemas.jsonPointer,
+    submodelId: z.string().min(1, 'Submodel ID cannot be empty'),
+    path: z.string().min(1, 'Path cannot be empty'), // Dot-separated idShort path (e.g., "ContactInformation.Street")
   }),
 
   query_list_elements: z.object({
-    path: schemas.jsonPointer.optional(),
+    submodelId: z.string().min(1, 'Submodel ID cannot be empty'),
+    collectionPath: z.string().optional(), // Optional path to SubmodelElementCollection
   }),
 
   query_get_pointer: z.object({
-    idShort: z.string().min(1, 'idShort cannot be empty'),
-    parentPath: schemas.jsonPointer.optional(),
+    submodelId: z.string().min(1, 'Submodel ID cannot be empty'),
+    elementPath: z.string().min(1, 'Element path cannot be empty'), // Dot-separated idShort path
   }),
 
   query_diff: z.object({
-    path: schemas.jsonPointer.optional(),
+    compareWith: z.enum(['undo', 'file']),
+    fileContent: schemas.base64Content.optional(), // Required when compareWith="file"
+    undoSteps: schemas.positiveInt.optional(), // Only when compareWith="undo"
   }),
 
   // Edit tools
@@ -148,37 +152,53 @@ export const toolSchemas = {
   }),
 
   validate_auto_fix: z.object({
-    maxIterations: schemas.positiveInt.max(10).optional(),
-    autoApprove: z.boolean().optional(),
+    errors: z.array(
+      z.object({
+        path: z.string(),
+        message: z.string(),
+        code: z.string().optional(),
+        severity: z.string().optional(),
+      })
+    ),
+    maxAttempts: schemas.positiveInt.max(10).optional(),
   }),
 
   // Import tools
   import_suggest_template: z.object({
-    submodelPath: schemas.jsonPointer.optional(),
+    templateId: z.string().min(1, 'Template ID cannot be empty'),
+    prefillData: z.record(z.unknown()).optional(),
+    includeOptional: z.boolean().optional(),
   }),
 
   import_spreadsheet: z.object({
-    content: schemas.base64Content,
-    filename: schemas.filename,
+    filePath: schemas.filePath.optional(),
+    base64Content: schemas.base64Content.optional(),
+    fileType: z.enum(['csv', 'xlsx', 'xls']).optional(),
     mapping: z.record(z.string()).optional(),
+    headerRow: schemas.positiveInt.optional(),
+    templateId: z.string().optional(),
   }),
 
   import_aas: z.object({
-    content: schemas.base64Content,
-    filename: schemas.filename,
-    mergeStrategy: z.enum(['replace', 'merge', 'append']).optional(),
+    filePath: schemas.filePath.optional(),
+    base64Content: schemas.base64Content.optional(),
+    submodelIds: z.array(z.string()).optional(),
+    mergeStrategy: z.enum(['replace', 'merge', 'skip']).optional(),
   }),
 
   import_pdf: z.object({
-    content: schemas.base64Content,
-    filename: schemas.filename,
-    extractionMode: z.enum(['text', 'structured', 'ocr']).optional(),
+    filePath: schemas.filePath.optional(),
+    base64Content: schemas.base64Content.optional(),
+    targetSubmodel: z.string().optional(),
+    pages: z.array(schemas.positiveInt).optional(),
+    targetFields: z.array(z.string()).optional(),
   }),
 
   import_image: z.object({
-    content: schemas.base64Content,
-    filename: schemas.filename,
-    analysisMode: z.enum(['ocr', 'vision', 'both']).optional(),
+    filePath: schemas.filePath.optional(),
+    base64Content: schemas.base64Content.optional(),
+    mimeType: z.string().optional(),
+    targetFields: z.array(z.string()).optional(),
   }),
 
   // AI tools

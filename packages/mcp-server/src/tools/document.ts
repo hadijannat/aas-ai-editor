@@ -50,7 +50,7 @@ interface UndoEntry {
  */
 const loadDocument: ToolDefinition = {
   name: 'document_load',
-  description: 'Load and parse an AASX or JSON file from local filesystem. Returns the AAS Environment structure.',
+  description: 'Load and parse an AASX or JSON file from local filesystem only (URLs not supported). Use document_load_content for browser uploads. Returns the AAS Environment structure.',
   inputSchema: {
     type: 'object',
     properties: {

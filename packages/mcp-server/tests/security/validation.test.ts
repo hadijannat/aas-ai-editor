@@ -123,22 +123,26 @@ describe('Input Validation', () => {
     describe('validate_auto_fix', () => {
       it('should validate correct input', () => {
         const result = validateToolInput('validate_auto_fix', {
-          maxIterations: 5,
-          autoApprove: false,
+          errors: [
+            { path: '/submodels/0/id', message: 'id is required' },
+          ],
+          maxAttempts: 5,
         });
         expect(result.valid).toBe(true);
       });
 
-      it('should reject maxIterations > 10', () => {
+      it('should reject maxAttempts > 10', () => {
         const result = validateToolInput('validate_auto_fix', {
-          maxIterations: 100,
+          errors: [],
+          maxAttempts: 100,
         });
         expect(result.valid).toBe(false);
       });
 
-      it('should accept empty input for optional params', () => {
+      it('should require errors array', () => {
         const result = validateToolInput('validate_auto_fix', {});
-        expect(result.valid).toBe(true);
+        expect(result.valid).toBe(false);
+        expect(result.errors).toContain('errors: Required');
       });
     });
   });

@@ -17,6 +17,7 @@ import * as XLSX from 'xlsx';
 import type { Submodel, SubmodelElement, Environment, Reference, Key } from '@aas-ai-editor/core';
 import { readAasx, calculateDiff } from '@aas-ai-editor/core';
 import type { ToolDefinition, ToolResult } from '../types.js';
+import { createPathValidator } from '../security/paths.js';
 
 /**
  * Template metadata from registry
@@ -343,9 +344,17 @@ const importPdf: ToolDefinition = {
       pages?: number[];
       targetFields?: string[];
     };
-    const { logger } = context;
+    const { logger, session } = context;
 
     logger.info({ filePath, targetSubmodel, pages }, 'Importing PDF');
+
+    // Check if targetSubmodel is specified but no document is loaded
+    if (targetSubmodel && !session.documentState?.environment) {
+      return {
+        success: false,
+        error: 'targetSubmodel specified but no document loaded. Load a document first or omit targetSubmodel for standalone extraction.',
+      };
+    }
 
     try {
       // Get PDF buffer
@@ -353,7 +362,14 @@ const importPdf: ToolDefinition = {
       if (base64Content) {
         pdfBuffer = Buffer.from(base64Content, 'base64');
       } else if (filePath) {
-        pdfBuffer = await readFile(filePath);
+        // Validate path for security (prevent path traversal)
+        const pathValidator = createPathValidator();
+        const pathValidation = pathValidator.validate(filePath);
+        if (!pathValidation.valid) {
+          logger.warn({ path: filePath, error: pathValidation.error }, 'Path validation failed');
+          return { success: false, error: pathValidation.error };
+        }
+        pdfBuffer = await readFile(pathValidation.normalizedPath!);
       } else {
         return { success: false, error: 'Either filePath or base64Content is required' };
       }
@@ -368,27 +384,60 @@ const importPdf: ToolDefinition = {
       const extractedFields = parseExtractedFields(fullText, targetFields);
 
       // Generate patches - use full JSON Pointer paths if targetSubmodel is specified and document is loaded
-      const { session } = context;
-      let basePath = '';
+      let submodelIndex = -1;
+      let submodel: Submodel | undefined;
 
       if (targetSubmodel && session.documentState?.environment) {
         const env = session.documentState.environment as Environment;
-        const submodelIndex = env.submodels?.findIndex(
+        submodelIndex = env.submodels?.findIndex(
           sm => sm.idShort === targetSubmodel ||
                 sm.id === targetSubmodel ||
                 sm.semanticId?.keys?.[0]?.value === targetSubmodel
-        );
-        if (submodelIndex !== undefined && submodelIndex >= 0) {
-          basePath = `/submodels/${submodelIndex}/submodelElements`;
+        ) ?? -1;
+        if (submodelIndex >= 0) {
+          submodel = env.submodels?.[submodelIndex];
         }
       }
 
-      const suggestedPatches = Object.entries(extractedFields).map(([field, value]) => ({
-        op: 'replace' as const,
-        path: basePath ? `${basePath}/${field}/value` : `/${field}/value`,
-        value,
-        confidence: 0.7, // Heuristic extraction has moderate confidence
-      }));
+      // Generate patches with correct JSON Pointer paths (using element indices, not idShorts)
+      const suggestedPatches = Object.entries(extractedFields).map(([field, value]) => {
+        let path: string;
+        let op: 'replace' | 'add' = 'replace';
+
+        if (submodel && submodelIndex >= 0) {
+          // Find the element index by idShort
+          const elementIndex = submodel.submodelElements?.findIndex(el => el.idShort === field) ?? -1;
+          if (elementIndex >= 0) {
+            // Element exists - generate replace patch with correct index
+            path = `/submodels/${submodelIndex}/submodelElements/${elementIndex}/value`;
+          } else {
+            // Element doesn't exist - generate add patch for new Property
+            op = 'add';
+            path = `/submodels/${submodelIndex}/submodelElements/-`;
+            return {
+              op,
+              path,
+              value: {
+                modelType: 'Property',
+                idShort: field,
+                valueType: 'xs:string',
+                value,
+              },
+              confidence: 0.6, // Lower confidence for new elements
+            };
+          }
+        } else {
+          // No submodel context - use idShort path (caller needs to resolve)
+          path = `/${field}/value`;
+        }
+
+        return {
+          op,
+          path,
+          value,
+          confidence: 0.7, // Heuristic extraction has moderate confidence
+        };
+      });
 
       return {
         success: true,
@@ -535,8 +584,15 @@ const importSpreadsheet: ToolDefinition = {
         buffer = Buffer.from(base64Content, 'base64');
         extension = fileType || 'xlsx';
       } else if (filePath) {
-        buffer = await readFile(filePath);
-        extension = extname(filePath).toLowerCase().replace('.', '');
+        // Validate path for security (prevent path traversal)
+        const pathValidator = createPathValidator();
+        const pathValidation = pathValidator.validate(filePath);
+        if (!pathValidation.valid) {
+          logger.warn({ path: filePath, error: pathValidation.error }, 'Path validation failed');
+          return { success: false, error: pathValidation.error };
+        }
+        buffer = await readFile(pathValidation.normalizedPath!);
+        extension = extname(pathValidation.normalizedPath!).toLowerCase().replace('.', '');
       } else {
         return { success: false, error: 'Either filePath or base64Content is required' };
       }
@@ -666,9 +722,16 @@ const importImage: ToolDefinition = {
         imageBase64 = base64Content;
         imageMimeType = mimeType || 'image/png';
       } else if (filePath) {
-        const buffer = await readFile(filePath);
+        // Validate path for security (prevent path traversal)
+        const pathValidator = createPathValidator();
+        const pathValidation = pathValidator.validate(filePath);
+        if (!pathValidation.valid) {
+          logger.warn({ path: filePath, error: pathValidation.error }, 'Path validation failed');
+          return { success: false, error: pathValidation.error };
+        }
+        const buffer = await readFile(pathValidation.normalizedPath!);
         imageBase64 = buffer.toString('base64');
-        const ext = extname(filePath).toLowerCase();
+        const ext = extname(pathValidation.normalizedPath!).toLowerCase();
         const mimeTypes: Record<string, string> = {
           '.jpg': 'image/jpeg',
           '.jpeg': 'image/jpeg',
@@ -768,7 +831,14 @@ const importAas: ToolDefinition = {
         const buffer = Buffer.from(base64Content, 'base64');
         aasxBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
       } else if (filePath) {
-        const buffer = await readFile(filePath);
+        // Validate path for security (prevent path traversal)
+        const pathValidator = createPathValidator();
+        const pathValidation = pathValidator.validate(filePath);
+        if (!pathValidation.valid) {
+          logger.warn({ path: filePath, error: pathValidation.error }, 'Path validation failed');
+          return { success: false, error: pathValidation.error };
+        }
+        const buffer = await readFile(pathValidation.normalizedPath!);
         aasxBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
       } else {
         return { success: false, error: 'Either filePath or base64Content is required' };

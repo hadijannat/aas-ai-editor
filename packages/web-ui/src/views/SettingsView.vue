@@ -151,6 +151,15 @@ const applyTheme = (selectedTheme: 'light' | 'dark' | 'system') => {
         <p class="setting-hint">
           Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>
         </p>
+        <div class="security-notice">
+          <strong>Security Notice:</strong> Your API key is stored in browser localStorage. This means:
+          <ul>
+            <li>It persists until you clear browser data or click "Clear"</li>
+            <li>It's visible in browser developer tools (F12 > Application > Local Storage)</li>
+            <li>Any script running on this page could potentially access it (XSS risk)</li>
+          </ul>
+          For production use, consider configuring the server-side <code>ANTHROPIC_API_KEY</code> environment variable instead.
+        </div>
       </div>
     </section>
 
@@ -312,6 +321,32 @@ const applyTheme = (selectedTheme: 'light' | 'dark' | 'system') => {
 
 .setting-hint a {
   color: var(--color-primary);
+}
+
+.security-notice {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  color: #856404;
+}
+
+.security-notice ul {
+  margin: 0.5rem 0 0 1.25rem;
+  padding: 0;
+}
+
+.security-notice li {
+  margin-bottom: 0.25rem;
+}
+
+.security-notice code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.125rem;
+  font-family: monospace;
 }
 
 .radio-group {
