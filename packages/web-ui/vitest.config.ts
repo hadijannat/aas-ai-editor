@@ -13,6 +13,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    passWithNoTests: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
