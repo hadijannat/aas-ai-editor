@@ -33,20 +33,59 @@ test.describe('Smoke Tests', () => {
     await setupMcpMocks(page);
     const editor = new EditorPage(page);
 
-    await editor.gotoEditor();
+    // Load a document so the tree is rendered
+    await editor.gotoEditorWithDocument();
 
     // Tree component should be present
     await expect(editor.tree).toBeVisible();
   });
 
-  test('approval panel renders', async ({ page }) => {
-    await setupMcpMocks(page);
+  test('approval panel renders when pending operations exist', async ({ page }) => {
+    // Set up mocks with pending operations
+    await setupMcpMocks(
+      page,
+      createMockState({
+        pendingOperations: [
+          {
+            id: 'op-1',
+            toolName: 'edit_set_property',
+            tier: 1,
+            reason: 'Test operation',
+            patches: [{ op: 'replace', path: '/test', value: 'value' }],
+          },
+        ],
+      })
+    );
     const editor = new EditorPage(page);
 
-    await editor.gotoEditor();
+    // Load document
+    await editor.gotoEditorWithDocument();
 
-    // Approval panel should be present
-    await expect(editor.approvalPanel).toBeVisible();
+    // Inject pending operations into the store using the exposed pinia
+    await page.evaluate(() => {
+      const pinia = (window as unknown as { __pinia__?: { state: { value: { document?: { pendingOperations?: unknown[] } } } } }).__pinia__;
+      if (pinia?.state?.value?.document) {
+        // Use Vue's reactivity system by replacing the array reference
+        const ops = [
+          {
+            id: 'op-1',
+            toolName: 'edit_set_property',
+            tier: 1,
+            reason: 'Test operation',
+            createdAt: new Date().toISOString(),
+            patches: [{ op: 'replace', path: '/test', value: 'value' }],
+          },
+        ];
+        // Force reactivity by using Object.assign
+        Object.assign(pinia.state.value.document, { pendingOperations: ops });
+      }
+    });
+
+    // Wait for Vue reactivity to propagate
+    await page.waitForTimeout(200);
+
+    // Approval panel should be present now
+    await expect(editor.approvalPanel).toBeVisible({ timeout: 2000 });
   });
 
   test('MCP mock handler intercepts requests', async ({ page }) => {

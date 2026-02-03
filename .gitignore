@@ -11,6 +11,11 @@ build/
 coverage/
 .nyc_output/
 
+# Playwright
+playwright-report/
+test-results/
+.playwright/
+
 # Environment files
 .env
 .env.local

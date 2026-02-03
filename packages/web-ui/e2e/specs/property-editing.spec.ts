@@ -15,17 +15,14 @@ test.describe('Property Editing', () => {
     await setupMcpMocks(page, createMockState());
     const editor = new EditorPage(page);
 
-    await editor.gotoEditor();
+    // Load a document so the tree is rendered
+    await editor.gotoEditorWithDocument();
 
     // Wait for tree
     await expect(editor.tree).toBeVisible();
 
-    // The property editor should be visible when a property node is selected
-    // This depends on the actual app behavior
-    await expect(editor.propertyEditor).toBeVisible({ timeout: 5000 }).catch(() => {
-      // Property editor may not show until a property is selected
-      // This is expected behavior
-    });
+    // The property editor may not be visible until a property is selected
+    // This test verifies the tree is ready for selection
   });
 
   test('editing value shows save and cancel buttons', async ({ page }) => {

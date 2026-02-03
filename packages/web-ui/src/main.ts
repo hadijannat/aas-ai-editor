@@ -47,3 +47,8 @@ app.use(pinia);
 app.use(router);
 
 app.mount('#app');
+
+// Expose pinia for E2E tests
+if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+  (window as unknown as { __pinia__: typeof pinia }).__pinia__ = pinia;
+}

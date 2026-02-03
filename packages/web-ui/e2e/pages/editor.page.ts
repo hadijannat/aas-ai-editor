@@ -73,6 +73,50 @@ export class EditorPage extends BasePage {
     await this.waitForReady();
   }
 
+  /**
+   * Load a mock document by injecting environment data into the store.
+   * This simulates the effect of loading a document via MCP.
+   */
+  async loadMockDocument() {
+    await this.page.evaluate(async () => {
+      // First, fetch the environment from MCP mock
+      const response = await fetch('/mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'resources/read',
+          params: { uri: 'aas://environment' },
+        }),
+      });
+      const data = await response.json();
+      const env = JSON.parse(data.result.contents[0].content);
+
+      // Get Pinia store exposed for tests
+      const pinia = (window as unknown as { __pinia__?: { state: { value: { document?: { environment?: unknown; documentId?: string; filename?: string } } } } }).__pinia__;
+      if (pinia?.state?.value?.document) {
+        pinia.state.value.document.environment = env;
+        pinia.state.value.document.documentId = 'test-doc-123';
+        pinia.state.value.document.filename = 'test.aasx';
+      }
+    });
+
+    // Wait for Vue reactivity to propagate
+    await this.page.waitForTimeout(100);
+  }
+
+  /**
+   * Navigate to editor and load a mock document
+   */
+  async gotoEditorWithDocument() {
+    await this.goto('/');
+    await this.waitForReady();
+    await this.loadMockDocument();
+    // Wait for tree to render
+    await this.tree.waitFor({ state: 'visible', timeout: 5000 });
+  }
+
   // --- Tree Navigation ---
 
   /**

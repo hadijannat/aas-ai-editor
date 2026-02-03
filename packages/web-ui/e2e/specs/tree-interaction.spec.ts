@@ -15,7 +15,8 @@ test.describe('Tree Interaction', () => {
 
   test('tree displays AAS sections', async ({ page }) => {
     const editor = new EditorPage(page);
-    await editor.gotoEditor();
+    // Load document to render the tree
+    await editor.gotoEditorWithDocument();
 
     // The tree should show the main sections
     await expect(editor.tree).toBeVisible();
@@ -25,24 +26,25 @@ test.describe('Tree Interaction', () => {
 
     // Should have section headers and items from defaultEnvironment
     // The exact content depends on what's rendered from mock data
-    expect(labels.length).toBeGreaterThanOrEqual(0);
+    expect(labels.length).toBeGreaterThan(0);
   });
 
   test('clicking node selects it', async ({ page }) => {
     const editor = new EditorPage(page);
-    await editor.gotoEditor();
+    await editor.gotoEditorWithDocument();
 
     // Wait for tree to be visible
     await expect(editor.tree).toBeVisible();
 
-    // If there are tree nodes, clicking should add selection class
-    const nodes = editor.tree.locator('.node-content');
-    const nodeCount = await nodes.count();
+    // Find a selectable node (one with a type badge, which indicates it has data)
+    // Section headers don't have type/data so clicking them won't trigger selection
+    const selectableNodes = editor.tree.locator('.node-content:has(.node-type)');
+    const nodeCount = await selectableNodes.count();
 
     if (nodeCount > 0) {
-      await nodes.first().click();
+      await selectableNodes.first().click();
 
-      // After clicking, at least one node should have is-selected class
+      // After clicking, the node should have is-selected class
       const selectedNodes = editor.tree.locator('.node-content.is-selected');
       await expect(selectedNodes).toHaveCount(1);
     }
@@ -50,7 +52,7 @@ test.describe('Tree Interaction', () => {
 
   test('toggle button expands and collapses nodes', async ({ page }) => {
     const editor = new EditorPage(page);
-    await editor.gotoEditor();
+    await editor.gotoEditorWithDocument();
 
     await expect(editor.tree).toBeVisible();
 
@@ -75,7 +77,7 @@ test.describe('Tree Interaction', () => {
 
   test('expanded nodes show children', async ({ page }) => {
     const editor = new EditorPage(page);
-    await editor.gotoEditor();
+    await editor.gotoEditorWithDocument();
 
     await expect(editor.tree).toBeVisible();
 
@@ -92,7 +94,7 @@ test.describe('Tree Interaction', () => {
 
   test('node displays correct icon for model type', async ({ page }) => {
     const editor = new EditorPage(page);
-    await editor.gotoEditor();
+    await editor.gotoEditorWithDocument();
 
     await expect(editor.tree).toBeVisible();
 
