@@ -78,16 +78,27 @@ export function validateConfig(config: ServerConfig): string[] {
     errors.push('ANTHROPIC_API_KEY environment variable is required');
   }
 
-  if (config.server.port < 1 || config.server.port > 65535) {
+  // Check for NaN values from parseInt before numeric comparisons
+  if (!Number.isFinite(config.server.port)) {
+    errors.push('MCP_SERVER_PORT must be a valid number');
+  } else if (config.server.port < 1 || config.server.port > 65535) {
     errors.push('MCP_SERVER_PORT must be between 1 and 65535');
   }
 
-  if (config.session.timeoutMs !== undefined && config.session.timeoutMs <= 0) {
+  if (!Number.isFinite(config.session.timeoutMs)) {
+    errors.push('MCP_SESSION_TIMEOUT_MS must be a valid number');
+  } else if (config.session.timeoutMs !== undefined && config.session.timeoutMs <= 0) {
     errors.push('MCP_SESSION_TIMEOUT_MS must be positive');
   }
 
-  if (config.session.maxSessions !== undefined && config.session.maxSessions <= 0) {
+  if (!Number.isFinite(config.session.maxSessions)) {
+    errors.push('MCP_MAX_SESSIONS must be a valid number');
+  } else if (config.session.maxSessions !== undefined && config.session.maxSessions <= 0) {
     errors.push('MCP_MAX_SESSIONS must be positive');
+  }
+
+  if (!Number.isFinite(config.ai.maxTokens)) {
+    errors.push('AI_MAX_TOKENS must be a valid number');
   }
 
   return errors;

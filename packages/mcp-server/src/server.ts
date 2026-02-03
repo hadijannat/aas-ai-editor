@@ -40,30 +40,31 @@ export async function startServer(): Promise<void> {
 
   const app = express();
 
-  // Security middleware
+  // Security middleware - enable CSP/COEP in production
+  const isDev = process.env.NODE_ENV !== 'production';
   app.use(
     helmet({
-      contentSecurityPolicy: false, // Allow inline scripts for dev
-      crossOriginEmbedderPolicy: false,
+      contentSecurityPolicy: isDev ? false : undefined,
+      crossOriginEmbedderPolicy: isDev ? false : undefined,
     })
   );
 
-  // CORS configuration
+  // CORS configuration - trim whitespace from origins
   const corsOptions = {
-    origin: process.env.CORS_ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173'],
+    origin: process.env.CORS_ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) || ['http://localhost:5173'],
     credentials: true,
     exposedHeaders: ['X-Session-Id'],
     methods: ['GET', 'POST', 'OPTIONS'],
   };
   app.use(cors(corsOptions));
 
-  // Rate limiting
+  // Rate limiting - use IP only (X-Session-Id is untrusted user input)
   const limiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
     max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => (req.headers['x-session-id'] as string) || req.ip || 'unknown',
+    keyGenerator: (req) => req.ip || 'unknown',
   });
   app.use('/mcp', limiter);
 
