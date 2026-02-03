@@ -11,12 +11,44 @@ const anthropicApiKey = ref('');
 const showApiKey = ref(false);
 const apiKeyStatus = ref<'unchecked' | 'valid' | 'invalid'>('unchecked');
 
+// Settings saved status
+const settingsSaved = ref(false);
+
+// Default values for reset
+const DEFAULTS = {
+  mcpServerUrl: 'http://localhost:3001',
+  theme: 'system' as const,
+  autoValidate: true,
+  showApprovalTiers: true,
+};
+
 // Load saved settings from localStorage
 onMounted(() => {
   const savedApiKey = localStorage.getItem('anthropic_api_key');
   if (savedApiKey) {
     anthropicApiKey.value = savedApiKey;
     apiKeyStatus.value = 'valid'; // Assume valid if previously saved
+  }
+
+  // Load other saved settings
+  const savedMcpUrl = localStorage.getItem('mcp_server_url');
+  if (savedMcpUrl) {
+    mcpServerUrl.value = savedMcpUrl;
+  }
+
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
+    theme.value = savedTheme;
+  }
+
+  const savedAutoValidate = localStorage.getItem('auto_validate');
+  if (savedAutoValidate !== null) {
+    autoValidate.value = savedAutoValidate === 'true';
+  }
+
+  const savedShowTiers = localStorage.getItem('show_approval_tiers');
+  if (savedShowTiers !== null) {
+    showApprovalTiers.value = savedShowTiers === 'true';
   }
 });
 
@@ -34,6 +66,50 @@ const clearApiKey = () => {
   anthropicApiKey.value = '';
   localStorage.removeItem('anthropic_api_key');
   apiKeyStatus.value = 'unchecked';
+};
+
+const saveSettings = () => {
+  // Save all settings to localStorage
+  localStorage.setItem('mcp_server_url', mcpServerUrl.value);
+  localStorage.setItem('theme', theme.value);
+  localStorage.setItem('auto_validate', String(autoValidate.value));
+  localStorage.setItem('show_approval_tiers', String(showApprovalTiers.value));
+
+  // Apply theme immediately
+  applyTheme(theme.value);
+
+  // Show saved confirmation
+  settingsSaved.value = true;
+  setTimeout(() => {
+    settingsSaved.value = false;
+  }, 2000);
+};
+
+const resetToDefaults = () => {
+  // Reset values to defaults
+  mcpServerUrl.value = DEFAULTS.mcpServerUrl;
+  theme.value = DEFAULTS.theme;
+  autoValidate.value = DEFAULTS.autoValidate;
+  showApprovalTiers.value = DEFAULTS.showApprovalTiers;
+
+  // Clear from localStorage (keep API key separate)
+  localStorage.removeItem('mcp_server_url');
+  localStorage.removeItem('theme');
+  localStorage.removeItem('auto_validate');
+  localStorage.removeItem('show_approval_tiers');
+
+  // Apply default theme
+  applyTheme(DEFAULTS.theme);
+};
+
+const applyTheme = (selectedTheme: 'light' | 'dark' | 'system') => {
+  const root = document.documentElement;
+  if (selectedTheme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    root.setAttribute('data-theme', selectedTheme);
+  }
 };
 </script>
 
@@ -142,8 +218,10 @@ const clearApiKey = () => {
     </section>
 
     <div class="settings-actions">
-      <button class="btn btn-primary">Save Settings</button>
-      <button class="btn btn-secondary">Reset to Defaults</button>
+      <button class="btn btn-primary" @click="saveSettings">
+        {{ settingsSaved ? 'Saved!' : 'Save Settings' }}
+      </button>
+      <button class="btn btn-secondary" @click="resetToDefaults">Reset to Defaults</button>
     </div>
   </div>
 </template>

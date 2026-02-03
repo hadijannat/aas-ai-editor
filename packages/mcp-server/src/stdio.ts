@@ -203,6 +203,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Failed to start MCP server:', error);
+  // Use process.stderr.write to avoid corrupting MCP JSON-RPC protocol on stdout
+  process.stderr.write(`Failed to start MCP server: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);
 });

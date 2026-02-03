@@ -3,8 +3,10 @@
  */
 
 import fastJsonPatch from 'fast-json-patch';
-const { getValueByPointer } = fastJsonPatch;
+import type { Operation } from 'fast-json-patch';
+const { getValueByPointer, applyPatch: jsonPatchApply } = fastJsonPatch;
 import type { AasPatchOp } from './schema.js';
+import { deepClone } from '../utils/polyfill.js';
 
 /**
  * Create an inverse patch that undoes the given patch
@@ -43,7 +45,7 @@ export function invertPatch<T>(document: T, patch: AasPatchOp): AasPatchOp | und
       return {
         op: 'add',
         path: patch.path,
-        value: structuredClone(originalValue),
+        value: deepClone(originalValue),
         reason: `Undo: ${patch.reason || 'remove operation'}`,
       };
     }
@@ -54,7 +56,7 @@ export function invertPatch<T>(document: T, patch: AasPatchOp): AasPatchOp | und
       return {
         op: 'replace',
         path: patch.path,
-        value: structuredClone(originalValue),
+        value: deepClone(originalValue),
         reason: `Undo: ${patch.reason || 'replace operation'}`,
       };
     }
@@ -99,7 +101,7 @@ export function invertPatches<T>(document: T, patches: AasPatchOp[]): AasPatchOp
   const inverses: AasPatchOp[] = [];
 
   // We need to apply patches incrementally to get correct inverses
-  let current = structuredClone(document);
+  let current = deepClone(document);
 
   for (const patch of patches) {
     const inverse = invertPatch(current, patch);
@@ -122,11 +124,19 @@ export function invertPatches<T>(document: T, patches: AasPatchOp[]): AasPatchOp
 }
 
 /**
- * Simplified patch application for inverse calculation
- * (The real version uses fast-json-patch)
+ * Apply a patch for inverse calculation using fast-json-patch directly
+ * This avoids circular dependency with apply.ts
  */
-function applyPatchSimple<T>(document: T, _patch: AasPatchOp): T {
-  // This is a stub - actual implementation delegates to fast-json-patch
-  // For now, just return cloned document
-  return structuredClone(document);
+function applyPatchSimple<T>(document: T, patch: AasPatchOp): T {
+  const cloned = deepClone(document);
+
+  const operation: Operation = {
+    op: patch.op,
+    path: patch.path,
+    value: patch.value,
+    from: patch.from,
+  } as Operation;
+
+  const result = jsonPatchApply(cloned, [operation], true, false);
+  return result.newDocument as T;
 }

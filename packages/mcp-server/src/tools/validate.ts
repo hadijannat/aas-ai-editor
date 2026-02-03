@@ -14,6 +14,7 @@ import {
   createPatch,
   applyPatches,
   ApprovalTier,
+  deepClone,
   type Environment,
   type Submodel,
   type ValidationResult,
@@ -796,7 +797,7 @@ const selfCorrectingLoop: ToolDefinition = {
     const originalEnv = session.documentState.environment as Environment;
     // Create a working copy for iteration - fixes are applied here for re-validation
     // but the original environment is not modified until user approves patches
-    let workingEnv = structuredClone(originalEnv);
+    let workingEnv = deepClone(originalEnv);
     let allGeneratedPatches: AasPatchOp[] = [];
     let totalFixesApplied = 0;
 

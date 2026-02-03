@@ -105,16 +105,20 @@ function diffSubmodels(
   after: Submodel[],
   entries: DiffEntry[]
 ): void {
-  // Match submodels by id
+  // Match submodels by id with index maps for O(1) lookup
   const beforeById = new Map(before.map((sm) => [sm.id, sm]));
   const afterById = new Map(after.map((sm) => [sm.id, sm]));
+
+  // Create index maps upfront to avoid O(n) indexOf calls in loops
+  const beforeIndexById = new Map(before.map((sm, idx) => [sm.id, idx]));
+  const afterIndexById = new Map(after.map((sm, idx) => [sm.id, idx]));
 
   // Find removed submodels
   for (const [id, sm] of beforeById) {
     if (!afterById.has(id)) {
       entries.push({
         type: 'removed',
-        beforePath: `/submodels/${before.indexOf(sm)}`,
+        beforePath: `/submodels/${beforeIndexById.get(id)}`,
         idShort: sm.idShort,
         semanticId: sm.semanticId?.keys?.[0]?.value,
         description: `Submodel "${sm.idShort || sm.id}" removed`,
@@ -127,7 +131,7 @@ function diffSubmodels(
     if (!beforeById.has(id)) {
       entries.push({
         type: 'added',
-        afterPath: `/submodels/${after.indexOf(sm)}`,
+        afterPath: `/submodels/${afterIndexById.get(id)}`,
         idShort: sm.idShort,
         semanticId: sm.semanticId?.keys?.[0]?.value,
         description: `Submodel "${sm.idShort || sm.id}" added`,
@@ -139,8 +143,8 @@ function diffSubmodels(
   for (const [id, beforeSm] of beforeById) {
     const afterSm = afterById.get(id);
     if (afterSm) {
-      const beforeIndex = before.indexOf(beforeSm);
-      const afterIndex = after.indexOf(afterSm);
+      const beforeIndex = beforeIndexById.get(id)!;
+      const afterIndex = afterIndexById.get(id)!;
       diffSubmodelElements(
         beforeSm.submodelElements || [],
         afterSm.submodelElements || [],
@@ -159,16 +163,20 @@ function diffSubmodelElements(
   afterBasePath: string,
   entries: DiffEntry[]
 ): void {
-  // Match by idShort
+  // Match by idShort with index maps for O(1) lookup
   const beforeByIdShort = new Map(before.map((sme) => [sme.idShort, sme]));
   const afterByIdShort = new Map(after.map((sme) => [sme.idShort, sme]));
 
+  // Create index maps upfront to avoid O(n) indexOf calls in loops
+  const beforeIndexByIdShort = new Map(before.map((sme, idx) => [sme.idShort, idx]));
+  const afterIndexByIdShort = new Map(after.map((sme, idx) => [sme.idShort, idx]));
+
   // Find removed elements
-  for (const [idShort, sme] of beforeByIdShort) {
+  for (const [idShort] of beforeByIdShort) {
     if (idShort && !afterByIdShort.has(idShort)) {
       entries.push({
         type: 'removed',
-        beforePath: `${beforeBasePath}/${before.indexOf(sme)}`,
+        beforePath: `${beforeBasePath}/${beforeIndexByIdShort.get(idShort)}`,
         idShort,
         description: `Element "${idShort}" removed`,
       });
@@ -176,11 +184,11 @@ function diffSubmodelElements(
   }
 
   // Find added elements
-  for (const [idShort, sme] of afterByIdShort) {
+  for (const [idShort] of afterByIdShort) {
     if (idShort && !beforeByIdShort.has(idShort)) {
       entries.push({
         type: 'added',
-        afterPath: `${afterBasePath}/${after.indexOf(sme)}`,
+        afterPath: `${afterBasePath}/${afterIndexByIdShort.get(idShort)}`,
         idShort,
         description: `Element "${idShort}" added`,
       });
@@ -195,8 +203,8 @@ function diffSubmodelElements(
       diffSingleElement(
         beforeSme,
         afterSme,
-        `${beforeBasePath}/${before.indexOf(beforeSme)}`,
-        `${afterBasePath}/${after.indexOf(afterSme)}`,
+        `${beforeBasePath}/${beforeIndexByIdShort.get(idShort)}`,
+        `${afterBasePath}/${afterIndexByIdShort.get(idShort)}`,
         entries
       );
     }
@@ -421,12 +429,16 @@ function diffAasEntries(
   const beforeById = new Map(before.map((aas) => [aas.id, aas]));
   const afterById = new Map(after.map((aas) => [aas.id, aas]));
 
+  // Create index maps upfront to avoid O(n) indexOf calls in loops
+  const beforeIndexById = new Map(before.map((aas, idx) => [aas.id, idx]));
+  const afterIndexById = new Map(after.map((aas, idx) => [aas.id, idx]));
+
   // Find removed AAS
   for (const [id, aas] of beforeById) {
     if (!afterById.has(id)) {
       entries.push({
         type: 'removed',
-        beforePath: `/assetAdministrationShells/${before.indexOf(aas)}`,
+        beforePath: `/assetAdministrationShells/${beforeIndexById.get(id)}`,
         idShort: aas.idShort,
         description: `AAS "${aas.idShort || aas.id}" removed`,
       });
@@ -438,7 +450,7 @@ function diffAasEntries(
     if (!beforeById.has(id)) {
       entries.push({
         type: 'added',
-        afterPath: `/assetAdministrationShells/${after.indexOf(aas)}`,
+        afterPath: `/assetAdministrationShells/${afterIndexById.get(id)}`,
         idShort: aas.idShort,
         description: `AAS "${aas.idShort || aas.id}" added`,
       });
@@ -449,8 +461,8 @@ function diffAasEntries(
   for (const [id, beforeAas] of beforeById) {
     const afterAas = afterById.get(id);
     if (afterAas) {
-      const beforeIndex = before.indexOf(beforeAas);
-      const afterIndex = after.indexOf(afterAas);
+      const beforeIndex = beforeIndexById.get(id)!;
+      const afterIndex = afterIndexById.get(id)!;
       diffSingleAas(beforeAas, afterAas, beforeIndex, afterIndex, entries);
     }
   }
@@ -505,7 +517,7 @@ function diffSingleAas(
     });
   }
 
-  // Compare submodel references
+  // Compare submodel references using Sets for O(1) lookups
   const beforeSubmodelIds = (before.submodels || []).map(
     (ref) => ref.keys[0]?.value
   );
@@ -513,8 +525,11 @@ function diffSingleAas(
     (ref) => ref.keys[0]?.value
   );
 
-  const removedRefs = beforeSubmodelIds.filter((id) => !afterSubmodelIds.includes(id));
-  const addedRefs = afterSubmodelIds.filter((id) => !beforeSubmodelIds.includes(id));
+  const afterSubmodelIdSet = new Set(afterSubmodelIds);
+  const beforeSubmodelIdSet = new Set(beforeSubmodelIds);
+
+  const removedRefs = beforeSubmodelIds.filter((id) => !afterSubmodelIdSet.has(id));
+  const addedRefs = afterSubmodelIds.filter((id) => !beforeSubmodelIdSet.has(id));
 
   for (const refId of removedRefs) {
     entries.push({
@@ -545,12 +560,16 @@ function diffConceptDescriptions(
   const beforeById = new Map(before.map((cd) => [cd.id, cd]));
   const afterById = new Map(after.map((cd) => [cd.id, cd]));
 
+  // Create index maps upfront to avoid O(n) indexOf calls in loops
+  const beforeIndexById = new Map(before.map((cd, idx) => [cd.id, idx]));
+  const afterIndexById = new Map(after.map((cd, idx) => [cd.id, idx]));
+
   // Find removed ConceptDescriptions
   for (const [id, cd] of beforeById) {
     if (!afterById.has(id)) {
       entries.push({
         type: 'removed',
-        beforePath: `/conceptDescriptions/${before.indexOf(cd)}`,
+        beforePath: `/conceptDescriptions/${beforeIndexById.get(id)}`,
         idShort: cd.idShort,
         description: `ConceptDescription "${cd.idShort || cd.id}" removed`,
       });
@@ -562,7 +581,7 @@ function diffConceptDescriptions(
     if (!beforeById.has(id)) {
       entries.push({
         type: 'added',
-        afterPath: `/conceptDescriptions/${after.indexOf(cd)}`,
+        afterPath: `/conceptDescriptions/${afterIndexById.get(id)}`,
         idShort: cd.idShort,
         description: `ConceptDescription "${cd.idShort || cd.id}" added`,
       });
@@ -573,8 +592,8 @@ function diffConceptDescriptions(
   for (const [id, beforeCd] of beforeById) {
     const afterCd = afterById.get(id);
     if (afterCd) {
-      const beforeIndex = before.indexOf(beforeCd);
-      const afterIndex = after.indexOf(afterCd);
+      const beforeIndex = beforeIndexById.get(id)!;
+      const afterIndex = afterIndexById.get(id)!;
       diffSingleConceptDescription(beforeCd, afterCd, beforeIndex, afterIndex, entries);
     }
   }

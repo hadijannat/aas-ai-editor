@@ -41,6 +41,31 @@ export interface PathValidationResult {
 }
 
 /**
+ * Recursively decode URL-encoded strings to detect multi-level encoding attacks
+ */
+function fullyDecodeUri(input: string, maxIterations = 3): string {
+  let current = input;
+  let iteration = 0;
+
+  while (iteration < maxIterations) {
+    try {
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) {
+        // No more decoding possible
+        break;
+      }
+      current = decoded;
+      iteration++;
+    } catch {
+      // Invalid encoding, stop decoding
+      break;
+    }
+  }
+
+  return current;
+}
+
+/**
  * Check if a path is safe (no traversal sequences)
  */
 export function isPathSafe(inputPath: string): boolean {
@@ -55,7 +80,7 @@ export function isPathSafe(inputPath: string): boolean {
     return false;
   }
 
-  // Check for URL-encoded traversal attempts
+  // Check for URL-encoded traversal attempts (single encoding)
   if (inputPath.includes('%2e') || inputPath.includes('%2E')) {
     return false;
   }
@@ -64,6 +89,16 @@ export function isPathSafe(inputPath: string): boolean {
   }
   if (inputPath.includes('%5c') || inputPath.includes('%5C')) {
     return false;
+  }
+
+  // Check for double-encoded traversal attempts (%25 = encoded %)
+  // %252e%252e decodes to %2e%2e which decodes to ..
+  if (inputPath.includes('%25')) {
+    // Fully decode and re-check for traversal patterns
+    const decoded = fullyDecodeUri(inputPath);
+    if (decoded.includes('..') || decoded.includes('/') || decoded.includes('\\')) {
+      return false;
+    }
   }
 
   return true;

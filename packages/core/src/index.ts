@@ -18,3 +18,6 @@ export * from './diff/index.js';
 
 // IDTA templates
 export * from './idta/index.js';
+
+// Utility functions
+export * from './utils/index.js';

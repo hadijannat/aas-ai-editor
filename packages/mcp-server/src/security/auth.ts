@@ -42,12 +42,23 @@ export function hashApiKey(key: string): string {
  * Timing-safe comparison of API keys to prevent timing attacks
  */
 function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    // Still do comparison to maintain constant time
-    crypto.timingSafeEqual(Buffer.from(a), Buffer.from(a));
+  // Create buffers of equal length to ensure constant-time comparison
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+
+  // If lengths differ, still do a comparison to maintain constant time
+  // but pad the shorter buffer to match the longer one's length
+  if (bufA.length !== bufB.length) {
+    // Use the longer length for both buffers to maintain constant time
+    const maxLen = Math.max(bufA.length, bufB.length);
+    const paddedA = Buffer.alloc(maxLen);
+    const paddedB = Buffer.alloc(maxLen);
+    bufA.copy(paddedA);
+    bufB.copy(paddedB);
+    crypto.timingSafeEqual(paddedA, paddedB);
     return false;
   }
-  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 /**

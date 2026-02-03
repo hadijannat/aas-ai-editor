@@ -7,6 +7,7 @@ import type { Operation } from 'fast-json-patch';
 const { applyPatch: jsonPatchApply } = fastJsonPatch;
 import { type AasPatchOp, type PatchResult, validatePatchOp } from './schema.js';
 import { invertPatch } from './invert.js';
+import { deepClone } from '../utils/polyfill.js';
 
 /**
  * Apply a single patch to a document
@@ -23,7 +24,7 @@ export function applyPatch<T>(document: T, patch: AasPatchOp): PatchResult<T> {
   }
 
   // Clone the document to avoid mutation
-  const cloned = structuredClone(document);
+  const cloned = deepClone(document);
 
   try {
     // Calculate inverse before applying
@@ -74,7 +75,7 @@ export function applyPatches<T>(document: T, patches: AasPatchOp[]): PatchResult
   }
 
   // Clone the document
-  let current = structuredClone(document);
+  let current = deepClone(document);
   const inversePatches: AasPatchOp[] = [];
 
   // Apply patches one by one, collecting inverses
