@@ -35,13 +35,13 @@ interface UndoEntry {
  */
 const loadDocument: ToolDefinition = {
   name: 'document_load',
-  description: 'Load and parse an AASX file. Returns the AAS Environment structure.',
+  description: 'Load and parse an AASX or JSON file from local filesystem. Returns the AAS Environment structure.',
   inputSchema: {
     type: 'object',
     properties: {
       path: {
         type: 'string',
-        description: 'File path or URL to the AASX file',
+        description: 'Local file path to the AASX or JSON file',
       },
     },
     required: ['path'],
@@ -79,7 +79,7 @@ const loadDocument: ToolDefinition = {
         supplementaryFiles = result.supplementaryFiles;
       }
 
-      // Store in session state
+      // Store in session state (track source format for proper round-trip)
       session.documentId = filePath;
       session.documentState = {
         id: filePath,
@@ -89,6 +89,7 @@ const loadDocument: ToolDefinition = {
         undoStack: [],
         redoStack: [],
         supplementaryFiles,
+        sourceFormat: isJson ? 'json' : 'aasx',
       };
 
       // Log any parsing warnings
@@ -130,7 +131,7 @@ const loadDocument: ToolDefinition = {
  */
 const saveDocument: ToolDefinition = {
   name: 'document_save',
-  description: 'Save the current document to AASX format.',
+  description: 'Save the current document. Format is determined by output path extension (.json for JSON, .aasx for AASX) or source format.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -164,14 +165,32 @@ const saveDocument: ToolDefinition = {
     try {
       const environment = session.documentState.environment as Environment;
 
-      // Write using core library, preserving supplementary files
-      const aasxData = await writeAasx(environment, {
-        filename: path.basename(outputPath).replace(/\.aasx$/, '.json'),
-        supplementaryFiles: session.documentState.supplementaryFiles,
-      });
+      // Determine output format from path extension or source format
+      const isJsonOutput = outputPath.endsWith('.json') ||
+        (session.documentState.sourceFormat === 'json' && !outputPath.endsWith('.aasx'));
+
+      let outputData: Buffer | Uint8Array;
+      let size: number;
+
+      if (isJsonOutput) {
+        // Write as JSON
+        const jsonContent = JSON.stringify(environment, null, 2);
+        outputData = Buffer.from(jsonContent, 'utf-8');
+        size = outputData.byteLength;
+        logger.info({ outputPath, format: 'json' }, 'Saving as JSON');
+      } else {
+        // Write as AASX using core library, preserving supplementary files
+        const aasxData = await writeAasx(environment, {
+          filename: path.basename(outputPath).replace(/\.aasx$/, '.json'),
+          supplementaryFiles: session.documentState.supplementaryFiles,
+        });
+        outputData = aasxData;
+        size = aasxData.byteLength;
+        logger.info({ outputPath, format: 'aasx' }, 'Saving as AASX');
+      }
 
       // Write to disk
-      await fs.writeFile(outputPath, aasxData);
+      await fs.writeFile(outputPath, outputData);
 
       // Update state
       session.documentState.dirty = false;
@@ -181,7 +200,8 @@ const saveDocument: ToolDefinition = {
         success: true,
         data: {
           path: outputPath,
-          size: aasxData.byteLength,
+          size,
+          format: isJsonOutput ? 'json' : 'aasx',
           message: 'Document saved successfully',
         },
       };
@@ -375,7 +395,7 @@ const loadDocumentContent: ToolDefinition = {
       // Generate a unique document ID for content-based loads
       const documentId = `content://${filename}-${Date.now()}`;
 
-      // Store in session state
+      // Store in session state (track source format for proper round-trip)
       session.documentId = documentId;
       session.documentState = {
         id: documentId,
@@ -385,6 +405,7 @@ const loadDocumentContent: ToolDefinition = {
         undoStack: [],
         redoStack: [],
         supplementaryFiles,
+        sourceFormat: isJson ? 'json' : 'aasx',
       };
 
       // Log any parsing warnings
@@ -461,29 +482,32 @@ const getDocumentStatus: ToolDefinition = {
  */
 const exportDocument: ToolDefinition = {
   name: 'document_export',
-  description: 'Export the current document as base64-encoded AASX. Used for browser downloads when document was loaded from content.',
+  description: 'Export the current document as base64-encoded data. Used for browser downloads. Defaults to source format if not specified.',
   inputSchema: {
     type: 'object',
     properties: {
       format: {
         type: 'string',
         enum: ['aasx', 'json'],
-        description: 'Export format (default: aasx)',
+        description: 'Export format (default: source format or aasx)',
       },
     },
   },
   handler: async (params, context): Promise<ToolResult> => {
-    const { format = 'aasx' } = params as { format?: 'aasx' | 'json' };
+    const { format: requestedFormat } = params as { format?: 'aasx' | 'json' };
     const { session, logger } = context;
 
     if (!session.documentState) {
       return { success: false, error: 'No document loaded' };
     }
 
-    logger.info({ format }, 'Exporting document');
+    // Default to source format if not specified
+    const format = requestedFormat || session.documentState.sourceFormat || 'aasx';
+    logger.info({ format, sourceFormat: session.documentState.sourceFormat }, 'Exporting document');
 
     try {
       const environment = session.documentState.environment as Environment;
+      const baseFilename = session.documentState.filename?.replace(/\.(aasx|json)$/i, '') || 'document';
 
       if (format === 'json') {
         // Export as JSON
@@ -494,7 +518,7 @@ const exportDocument: ToolDefinition = {
           data: {
             content: base64Content,
             mimeType: 'application/json',
-            filename: session.documentState.filename?.replace(/\.aasx$/, '.json') || 'environment.json',
+            filename: `${baseFilename}.json`,
             message: 'Document exported as JSON',
           },
         };
@@ -502,7 +526,7 @@ const exportDocument: ToolDefinition = {
 
       // Export as AASX, preserving supplementary files
       const aasxData = await writeAasx(environment, {
-        filename: session.documentState.filename?.replace(/\.aasx$/, '.json') || 'environment.json',
+        filename: `${baseFilename}.json`, // Internal JSON filename within AASX
         supplementaryFiles: session.documentState.supplementaryFiles,
       });
 
@@ -513,7 +537,7 @@ const exportDocument: ToolDefinition = {
         data: {
           content: base64Content,
           mimeType: 'application/asset-administration-shell-package+xml',
-          filename: session.documentState.filename || 'document.aasx',
+          filename: `${baseFilename}.aasx`, // Always .aasx for AASX format
           message: 'Document exported as AASX',
         },
       };

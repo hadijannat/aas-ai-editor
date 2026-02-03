@@ -62,6 +62,9 @@ export interface DocumentState {
 
   /** Supplementary files from AASX package (thumbnails, PDFs, etc.) */
   supplementaryFiles?: Map<string, Uint8Array>;
+
+  /** Source format for proper round-trip (json or aasx) */
+  sourceFormat?: 'json' | 'aasx';
 }
 
 /**

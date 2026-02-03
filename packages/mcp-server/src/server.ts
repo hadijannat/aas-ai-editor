@@ -40,6 +40,13 @@ export async function startServer(): Promise<void> {
 
   const app = express();
 
+  // Trust proxy for accurate IP detection behind reverse proxies (nginx, load balancers)
+  // Set to 1 for single proxy, or 'loopback' for localhost proxies only
+  if (process.env.TRUST_PROXY) {
+    const trustValue = process.env.TRUST_PROXY === 'true' ? true : process.env.TRUST_PROXY;
+    app.set('trust proxy', trustValue);
+  }
+
   // Security middleware - enable CSP/COEP in production
   const isDev = process.env.NODE_ENV !== 'production';
   app.use(
@@ -50,9 +57,12 @@ export async function startServer(): Promise<void> {
   );
 
   // CORS configuration - trim whitespace from origins
+  // Note: credentials:true is incompatible with origin:'*', so disable credentials if wildcard
+  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS?.split(',').map((o) => o.trim());
+  const isWildcard = allowedOrigins?.includes('*');
   const corsOptions = {
-    origin: process.env.CORS_ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) || ['http://localhost:5173'],
-    credentials: true,
+    origin: isWildcard ? '*' : (allowedOrigins || ['http://localhost:5173']),
+    credentials: !isWildcard, // Disable credentials for wildcard origins (browser requirement)
     exposedHeaders: ['X-Session-Id'],
     methods: ['GET', 'POST', 'OPTIONS'],
   };

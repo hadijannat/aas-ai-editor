@@ -15,7 +15,11 @@ export interface ToolResult {
 const sessionId = ref<string | null>(null);
 const isConnected = ref(false);
 
-const MCP_BASE_URL = import.meta.env.VITE_MCP_SERVER_URL || '/mcp';
+// Build MCP endpoint URL - append /mcp if not already present
+const baseUrl = import.meta.env.VITE_MCP_SERVER_URL || '';
+const MCP_BASE_URL = baseUrl
+  ? baseUrl.endsWith('/mcp') ? baseUrl : `${baseUrl.replace(/\/$/, '')}/mcp`
+  : '/mcp';
 
 /**
  * Call an MCP tool
