@@ -30,7 +30,7 @@ async def validate_json(request: ValidationRequest) -> ValidationResult:
         result = await validator.validate(request.environment, request.options)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/file", response_model=ValidationResult)
@@ -66,7 +66,7 @@ async def validate_file(file: UploadFile) -> ValidationResult:
 
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.post("/schema", response_model=ValidationResult)
@@ -83,7 +83,7 @@ async def validate_schema(request: ValidationRequest) -> ValidationResult:
         result = await validator.validate(request.environment)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("/rules")

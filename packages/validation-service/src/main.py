@@ -4,14 +4,14 @@ FastAPI Application Entry Point
 Provides REST API for deep AAS validation.
 """
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import health, validate
 from .config import settings
+from .routes import health, validate
 
 
 @asynccontextmanager

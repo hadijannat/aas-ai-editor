@@ -320,7 +320,8 @@ class AasValidator:
                         warnings.append(
                             ValidationError(
                                 path=f"{elem_path}/first",
-                                message=f"RelationshipElement.first points to unknown element: {ref_id}",
+                                message=f"RelationshipElement.first points to unknown "
+                                f"element: {ref_id}",
                                 severity="warning",
                                 rule="references.unknown",
                             )
@@ -331,7 +332,8 @@ class AasValidator:
                         warnings.append(
                             ValidationError(
                                 path=f"{elem_path}/second",
-                                message=f"RelationshipElement.second points to unknown element: {ref_id}",
+                                message=f"RelationshipElement.second points to unknown "
+                                f"element: {ref_id}",
                                 severity="warning",
                                 rule="references.unknown",
                             )
