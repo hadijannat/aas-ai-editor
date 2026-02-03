@@ -312,9 +312,6 @@ function parseAasXml(xml: string): Environment {
 
   const result = parser.parse(xml);
 
-  // Debug: Log available root keys to help identify the XML structure
-  console.log('[parseAasXml] Parsed XML root keys:', Object.keys(result));
-
   // The root element could be "environment" or "aas:environment" etc.
   // Also check for common AAS v3 XML variations including namespaced versions
   const env = result.environment
@@ -326,8 +323,6 @@ function parseAasXml(xml: string): Environment {
     || result['aas-env:aasenv']
     || result.aasenv
     || result;
-
-  console.log('[parseAasXml] Selected env keys:', Object.keys(env));
 
   return transformXmlToEnvironment(env);
 }
