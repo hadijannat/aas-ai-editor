@@ -144,8 +144,26 @@ async function main() {
       logger: logger.child({ resource: resource.name }),
     };
 
-    const content = await resource.handler(uri, toolContext);
-    return { contents: [content] };
+    try {
+      const result = await resource.handler(uri, toolContext);
+      // MCP SDK expects 'text' field, not 'content'
+      return {
+        contents: [{
+          uri: result.uri,
+          mimeType: result.mimeType,
+          text: typeof result.content === 'string' ? result.content : Buffer.from(result.content).toString('base64'),
+        }],
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        contents: [{
+          uri,
+          mimeType: 'application/json',
+          text: JSON.stringify({ error: errorMessage }),
+        }],
+      };
+    }
   });
 
   // Register prompts handler
