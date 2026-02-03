@@ -1,0 +1,59 @@
+name: Documentation
+description: Report missing, incorrect, or unclear documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve our documentation! Please describe what needs to be added or fixed.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation issue is this?
+      options:
+        - "Missing documentation"
+        - "Incorrect documentation"
+        - "Unclear documentation"
+        - "Outdated documentation"
+        - "Typo or grammar"
+        - "New tutorial/guide needed"
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: Where is the documentation issue? (URL or file path)
+      placeholder: e.g., docs/guides/GETTING_STARTED.md
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What's wrong or missing?
+      placeholder: Describe the documentation issue...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: How would you improve it?
+      placeholder: I suggest...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to submit a PR to fix this
+          required: false

@@ -1,0 +1,80 @@
+# AASX AI Editor - Development Docker Compose
+# Usage: docker compose -f docker-compose.dev.yml up
+
+version: "3.9"
+
+services:
+  # Web UI with hot reload
+  web-ui:
+    build:
+      context: ../packages/web-ui
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../packages/web-ui/src:/app/src:ro
+      - ../packages/web-ui/public:/app/public:ro
+    environment:
+      - NODE_ENV=development
+      - VITE_MCP_URL=http://localhost:3001
+      - VITE_VALIDATION_URL=http://localhost:8000
+    networks:
+      - aas-dev-network
+
+  # MCP Server with file watching
+  mcp-server:
+    build:
+      context: ../packages/mcp-server
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "3001:3001"
+    volumes:
+      - ../packages/mcp-server/src:/app/src:ro
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - VALIDATION_SERVICE_URL=http://validation-service:8000
+      - LOG_LEVEL=debug
+      - SESSION_TTL_MINUTES=120
+    networks:
+      - aas-dev-network
+    depends_on:
+      - validation-service
+
+  # Python Validation Service with reload
+  validation-service:
+    build:
+      context: ../packages/validation-service
+      dockerfile: Dockerfile
+      target: base
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../packages/validation-service/src:/app/src:ro
+    environment:
+      - DEBUG=true
+      - HOST=0.0.0.0
+      - PORT=8000
+    command: ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    networks:
+      - aas-dev-network
+
+  # Core package for shared development
+  core:
+    build:
+      context: ../packages/core
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ../packages/core/src:/app/src:ro
+    networks:
+      - aas-dev-network
+    profiles:
+      - full
+
+networks:
+  aas-dev-network:
+    driver: bridge

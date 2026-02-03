@@ -1,0 +1,76 @@
+{
+  "modelType": "Submodel",
+  "id": "https://example.com/aas/submodel/nameplate/1",
+  "idShort": "Nameplate",
+  "semanticId": {
+    "type": "ExternalReference",
+    "keys": [
+      {
+        "type": "GlobalReference",
+        "value": "https://admin-shell.io/zvei/nameplate/2/0/Nameplate"
+      }
+    ]
+  },
+  "submodelElements": [
+    {
+      "modelType": "Property",
+      "idShort": "ManufacturerName",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/zvei/nameplate/2/0/ManufacturerName"
+          }
+        ]
+      },
+      "valueType": "xs:string",
+      "value": "Example Manufacturing GmbH"
+    },
+    {
+      "modelType": "Property",
+      "idShort": "ManufacturerProductDesignation",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/zvei/nameplate/2/0/ManufacturerProductDesignation"
+          }
+        ]
+      },
+      "valueType": "xs:string",
+      "value": "Industrial Sensor XYZ-2000"
+    },
+    {
+      "modelType": "Property",
+      "idShort": "SerialNumber",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/zvei/nameplate/2/0/SerialNumber"
+          }
+        ]
+      },
+      "valueType": "xs:string",
+      "value": "SN-2024-001234"
+    },
+    {
+      "modelType": "Property",
+      "idShort": "YearOfConstruction",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/zvei/nameplate/2/0/YearOfConstruction"
+          }
+        ]
+      },
+      "valueType": "xs:gYear",
+      "value": "2024"
+    }
+  ]
+}

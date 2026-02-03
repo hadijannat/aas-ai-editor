@@ -1,0 +1,82 @@
+{
+  "assetAdministrationShells": [
+    {
+      "modelType": "AssetAdministrationShell",
+      "id": "https://example.com/aas/sample-product",
+      "idShort": "SampleProduct",
+      "assetInformation": {
+        "assetKind": "Instance",
+        "globalAssetId": "https://example.com/asset/sample-product-001"
+      },
+      "submodels": [
+        {
+          "type": "ModelReference",
+          "keys": [
+            {
+              "type": "Submodel",
+              "value": "https://example.com/submodel/nameplate"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "submodels": [
+    {
+      "modelType": "Submodel",
+      "id": "https://example.com/submodel/nameplate",
+      "idShort": "Nameplate",
+      "semanticId": {
+        "type": "ExternalReference",
+        "keys": [
+          {
+            "type": "GlobalReference",
+            "value": "https://admin-shell.io/zvei/nameplate/2/0/Nameplate"
+          }
+        ]
+      },
+      "submodelElements": [
+        {
+          "modelType": "Property",
+          "idShort": "ManufacturerName",
+          "semanticId": {
+            "type": "ExternalReference",
+            "keys": [
+              {
+                "type": "GlobalReference",
+                "value": "0173-1#02-AAO677#002"
+              }
+            ]
+          },
+          "valueType": "xs:string",
+          "value": "ACME Corporation"
+        },
+        {
+          "modelType": "Property",
+          "idShort": "ManufacturerProductDesignation",
+          "valueType": "xs:string",
+          "value": "Industrial Widget Pro"
+        },
+        {
+          "modelType": "SubmodelElementCollection",
+          "idShort": "ContactInformation",
+          "value": [
+            {
+              "modelType": "Property",
+              "idShort": "Street",
+              "valueType": "xs:string",
+              "value": "123 Industrial Ave"
+            },
+            {
+              "modelType": "Property",
+              "idShort": "City",
+              "valueType": "xs:string",
+              "value": "Manufacturing City"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "conceptDescriptions": []
+}

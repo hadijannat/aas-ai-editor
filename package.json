@@ -1,0 +1,56 @@
+{
+  "name": "aas-ai-editor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-enhanced, browser-based AASX editor with Claude/MCP integration",
+  "license": "MIT",
+  "author": "AAS AI Editor Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/aas-ai-editor.git"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm --filter @aas-ai-editor/web-ui dev",
+    "dev:mcp": "pnpm --filter @aas-ai-editor/mcp-server dev",
+    "dev:validation": "pnpm --filter @aas-ai-editor/validation-service dev",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:e2e": "pnpm --filter @aas-ai-editor/web-ui test:e2e",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "husky",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:dev": "docker compose -f docker/docker-compose.dev.yml up",
+    "templates:compile": "pnpm --filter @aas-ai-editor/core compile-templates"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@types/node": "^20.10.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.2.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

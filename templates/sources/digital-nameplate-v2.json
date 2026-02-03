@@ -1,0 +1,141 @@
+{
+  "id": "idta-digital-nameplate",
+  "name": "Digital Nameplate",
+  "version": "2.0",
+  "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/Nameplate",
+  "description": "Digital nameplate for identification of assets according to IDTA 02006-2-0",
+  "sourceUrl": "https://github.com/admin-shell-io/submodel-templates/tree/main/published/Digital%20nameplate",
+  "structure": {
+    "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/Nameplate",
+    "elements": [
+      {
+        "idShort": "ManufacturerName",
+        "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/ManufacturerName",
+        "modelType": "Property",
+        "valueType": "xs:string",
+        "required": true,
+        "description": "Legally valid designation of the natural or judicial person"
+      },
+      {
+        "idShort": "ManufacturerProductDesignation",
+        "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/ManufacturerProductDesignation",
+        "modelType": "Property",
+        "valueType": "xs:string",
+        "required": true,
+        "description": "Product designation as given by the manufacturer"
+      },
+      {
+        "idShort": "SerialNumber",
+        "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/SerialNumber",
+        "modelType": "Property",
+        "valueType": "xs:string",
+        "required": true,
+        "description": "Unique combination of numbers and letters for identification"
+      },
+      {
+        "idShort": "ManufacturerProductFamily",
+        "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/ManufacturerProductFamily",
+        "modelType": "Property",
+        "valueType": "xs:string",
+        "required": false,
+        "description": "2nd level of a 3 level manufacturer specific product hierarchy"
+      },
+      {
+        "idShort": "YearOfConstruction",
+        "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/YearOfConstruction",
+        "modelType": "Property",
+        "valueType": "xs:gYear",
+        "required": false,
+        "description": "Year as completion date of object"
+      },
+      {
+        "idShort": "DateOfManufacture",
+        "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/DateOfManufacture",
+        "modelType": "Property",
+        "valueType": "xs:date",
+        "required": false,
+        "description": "Date from which the production and / or development process is completed"
+      },
+      {
+        "idShort": "ContactInformation",
+        "semanticId": "https://admin-shell.io/zvei/nameplate/1/0/ContactInformations/ContactInformation",
+        "modelType": "SubmodelElementCollection",
+        "required": false,
+        "description": "Contact information of the manufacturer",
+        "elements": [
+          {
+            "idShort": "Street",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false
+          },
+          {
+            "idShort": "City",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false
+          },
+          {
+            "idShort": "Country",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false
+          },
+          {
+            "idShort": "Email",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false
+          }
+        ]
+      }
+    ]
+  },
+  "constraints": [
+    {
+      "type": "required",
+      "path": "ManufacturerName",
+      "description": "Manufacturer name is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "required",
+      "path": "ManufacturerProductDesignation",
+      "description": "Product designation is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "required",
+      "path": "SerialNumber",
+      "description": "Serial number is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "pattern",
+      "path": "YearOfConstruction",
+      "params": {
+        "pattern": "^[0-9]{4}$"
+      },
+      "description": "Year must be 4 digits",
+      "autoFixable": false
+    },
+    {
+      "type": "pattern",
+      "path": "DateOfManufacture",
+      "params": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      },
+      "description": "Date must be in ISO format (YYYY-MM-DD)",
+      "autoFixable": false
+    },
+    {
+      "type": "pattern",
+      "path": "ContactInformation/Email",
+      "params": {
+        "pattern": "^[^@]+@[^@]+\\.[^@]+$"
+      },
+      "description": "Email must be valid format",
+      "autoFixable": false
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+/**
+ * Main Styles
+ * Using Tailwind CSS for utility classes
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for theming */
+:root {
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-secondary: #6b7280;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #f3f4f6;
+
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+
+  --color-border: #e5e7eb;
+
+  --sidebar-width: 280px;
+  --header-height: 56px;
+
+  /* Diff colors (light mode) */
+  --diff-add-bg: #dcfce7;
+  --diff-add-text: #166534;
+  --diff-remove-bg: #fee2e2;
+  --diff-remove-text: #991b1b;
+  --diff-modify-bg: #fef9c3;
+  --diff-modify-text: #854d0e;
+  --diff-move-bg: #dbeafe;
+  --diff-move-text: #1e40af;
+}
+
+/* Dark mode */
+.dark {
+  --color-bg-primary: #1f2937;
+  --color-bg-secondary: #111827;
+  --color-bg-tertiary: #374151;
+
+  --color-text-primary: #f9fafb;
+  --color-text-secondary: #d1d5db;
+  --color-text-muted: #6b7280;
+
+  --color-border: #374151;
+
+  /* Diff colors (dark mode) */
+  --diff-add-bg: rgba(22, 101, 52, 0.3);
+  --diff-add-text: #86efac;
+  --diff-remove-bg: rgba(153, 27, 27, 0.3);
+  --diff-remove-text: #fca5a5;
+  --diff-modify-bg: rgba(133, 77, 14, 0.3);
+  --diff-modify-text: #fde047;
+  --diff-move-bg: rgba(30, 64, 175, 0.3);
+  --diff-move-text: #93c5fd;
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Utility classes */
+.panel {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.btn-secondary {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-border);
+}
+
+.btn-danger {
+  background-color: var(--color-danger);
+  color: white;
+  border: none;
+}
+
+/* Approval tier badges */
+.tier-low {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.tier-medium {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.tier-high {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.tier-critical {
+  background-color: #fce7f3;
+  color: #9d174d;
+}

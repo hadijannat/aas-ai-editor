@@ -1,0 +1,114 @@
+version: 2
+
+updates:
+  # Root package.json
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "typescript"
+          - "eslint*"
+          - "prettier"
+          - "vitest"
+          - "@vitest/*"
+        update-types:
+          - "minor"
+          - "patch"
+      turbo:
+        patterns:
+          - "turbo"
+    labels:
+      - "dependencies"
+      - "npm"
+
+  # Core package
+  - package-ecosystem: "npm"
+    directory: "/packages/core"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+      - "core"
+
+  # MCP Server package
+  - package-ecosystem: "npm"
+    directory: "/packages/mcp-server"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+      - "mcp-server"
+
+  # Web UI package
+  - package-ecosystem: "npm"
+    directory: "/packages/web-ui"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      vue-ecosystem:
+        patterns:
+          - "vue*"
+          - "@vue/*"
+          - "pinia"
+          - "vue-router"
+    labels:
+      - "dependencies"
+      - "npm"
+      - "web-ui"
+
+  # Python validation service
+  - package-ecosystem: "pip"
+    directory: "/packages/validation-service"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+      - "validation-service"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/packages/mcp-server"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/packages/web-ui"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "docker"
+    directory: "/packages/validation-service"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"

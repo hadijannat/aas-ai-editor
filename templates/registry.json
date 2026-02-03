@@ -1,0 +1,98 @@
+{
+  "$schema": "./registry.schema.json",
+  "version": "1.0.0",
+  "description": "IDTA Submodel Template Registry",
+  "templates": [
+    {
+      "id": "idta-digital-nameplate",
+      "name": "Digital Nameplate",
+      "version": "2.0",
+      "semanticId": "https://admin-shell.io/zvei/nameplate/2/0/Nameplate",
+      "source": "sources/digital-nameplate-v2.json",
+      "compiled": "compiled/digital-nameplate-v2.compiled.json",
+      "description": "Digital nameplate for identification of assets according to IDTA 02006-2-0",
+      "category": "identification",
+      "requiredElements": [
+        "ManufacturerName",
+        "ManufacturerProductDesignation",
+        "SerialNumber"
+      ],
+      "optionalElements": [
+        "ManufacturerProductFamily",
+        "YearOfConstruction",
+        "DateOfManufacture",
+        "ContactInformation"
+      ]
+    },
+    {
+      "id": "idta-technical-data",
+      "name": "Technical Data",
+      "version": "1.2",
+      "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2",
+      "source": "sources/technical-data-v1.2.json",
+      "compiled": "compiled/technical-data-v1.2.compiled.json",
+      "description": "Technical specifications and characteristics",
+      "category": "technical",
+      "requiredElements": [
+        "GeneralInformation",
+        "TechnicalProperties"
+      ],
+      "optionalElements": [
+        "ProductClassifications",
+        "FurtherInformation"
+      ]
+    },
+    {
+      "id": "idta-carbon-footprint",
+      "name": "Carbon Footprint",
+      "version": "1.0",
+      "semanticId": "https://admin-shell.io/idta/CarbonFootprint/CarbonFootprint/1/0",
+      "source": "sources/carbon-footprint-v1.json",
+      "compiled": "compiled/carbon-footprint-v1.compiled.json",
+      "description": "Product and transport carbon footprint information",
+      "category": "sustainability",
+      "requiredElements": [
+        "ProductCarbonFootprint"
+      ],
+      "optionalElements": [
+        "TransportCarbonFootprint"
+      ]
+    },
+    {
+      "id": "idta-handover-documentation",
+      "name": "Handover Documentation",
+      "version": "1.2",
+      "semanticId": "https://admin-shell.io/ZVEI/HandoverDocumentation/1/2",
+      "source": "sources/handover-documentation-v1.2.json",
+      "compiled": "compiled/handover-documentation-v1.2.compiled.json",
+      "description": "Documentation handover for assets",
+      "category": "documentation",
+      "requiredElements": [
+        "Document"
+      ],
+      "optionalElements": []
+    }
+  ],
+  "categories": [
+    {
+      "id": "identification",
+      "name": "Identification",
+      "description": "Templates for asset identification"
+    },
+    {
+      "id": "technical",
+      "name": "Technical Data",
+      "description": "Templates for technical specifications"
+    },
+    {
+      "id": "sustainability",
+      "name": "Sustainability",
+      "description": "Templates for environmental and sustainability data"
+    },
+    {
+      "id": "documentation",
+      "name": "Documentation",
+      "description": "Templates for documentation management"
+    }
+  ]
+}

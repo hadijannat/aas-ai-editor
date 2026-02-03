@@ -1,0 +1,71 @@
+{
+  "name": "@aas-ai-editor/core",
+  "version": "0.1.0",
+  "description": "Core AASX parsing, patch operations, and validation for AAS AI Editor",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./aasx": {
+      "types": "./dist/aasx/index.d.ts",
+      "import": "./dist/aasx/index.js"
+    },
+    "./aas": {
+      "types": "./dist/aas/index.d.ts",
+      "import": "./dist/aas/index.js"
+    },
+    "./patch": {
+      "types": "./dist/patch/index.d.ts",
+      "import": "./dist/patch/index.js"
+    },
+    "./diff": {
+      "types": "./dist/diff/index.d.ts",
+      "import": "./dist/diff/index.js"
+    },
+    "./idta": {
+      "types": "./dist/idta/index.d.ts",
+      "import": "./dist/idta/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist",
+    "compile-templates": "tsx scripts/compile-templates.ts"
+  },
+  "dependencies": {
+    "fast-json-patch": "^3.1.1",
+    "fast-xml-parser": "^4.5.0",
+    "fflate": "^0.8.2",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^20.10.0",
+    "eslint": "^9.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^2.1.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}

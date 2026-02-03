@@ -1,0 +1,52 @@
+{
+  "name": "@aas-ai-editor/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP Streamable HTTP server with Claude AI integration for AASX editing",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aas-ai-editor/core": "workspace:*",
+    "@anthropic-ai/sdk": "^0.30.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "express": "^4.21.0",
+    "mammoth": "^1.11.0",
+    "pdfjs-dist": "^5.4.624",
+    "pino": "^9.4.0",
+    "pino-pretty": "^11.2.0",
+    "uuid": "^10.0.0",
+    "xlsx": "^0.18.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.0",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.54.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Turbo
+.turbo/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Docker
+docker/data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Editor-specific
+*.sublime-workspace
+*.sublime-project
+
+# Claude Code - AI assistant context (per-developer customization)
+CLAUDE.md
+
+# Compiled templates (generated)
+templates/compiled/
+
+# Sensitive/secret files
+*.pem
+*.key
+secrets/
