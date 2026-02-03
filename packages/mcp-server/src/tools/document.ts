@@ -20,6 +20,20 @@ import type { ToolDefinition, ToolResult } from '../types.js';
 import { createPathValidator } from '../security/paths.js';
 
 /**
+ * Detect file format from buffer using magic bytes
+ * ZIP (AASX) magic bytes: PK\x03\x04
+ * JSON starts with '{' (0x7b)
+ */
+function detectFormatFromBuffer(data: Buffer | Uint8Array): 'aasx' | 'json' {
+  if (data.length >= 4 &&
+      data[0] === 0x50 && data[1] === 0x4B &&
+      data[2] === 0x03 && data[3] === 0x04) {
+    return 'aasx';
+  }
+  return 'json';
+}
+
+/**
  * Undo entry stored on the undo stack
  */
 interface UndoEntry {
@@ -70,8 +84,9 @@ const loadDocument: ToolDefinition = {
       // Read the file from disk
       const fileData = await fs.readFile(safePath);
 
-      // Detect JSON vs AASX
-      const isJson = filePath.endsWith('.json') || fileData[0] === 0x7b; // 0x7b = '{'
+      // Detect JSON vs AASX using magic bytes
+      const detectedFormat = detectFormatFromBuffer(fileData);
+      const isJson = detectedFormat === 'json';
 
       let environment: Environment;
       let filename: string;
@@ -203,10 +218,20 @@ const saveDocument: ToolDefinition = {
 
     try {
       const environment = session.documentState.environment as Environment;
+      const sourceFormat = session.documentState.sourceFormat || 'aasx';
 
       // Determine output format from path extension or source format
+      // Priority: explicit extension > source format
       const isJsonOutput = safePath.endsWith('.json') ||
-        (session.documentState.sourceFormat === 'json' && !safePath.endsWith('.aasx'));
+        (sourceFormat === 'json' && !safePath.endsWith('.aasx'));
+      const outputFormat = isJsonOutput ? 'json' : 'aasx';
+
+      // Log format decision for debugging
+      logger.debug({
+        sourceFormat,
+        outputFormat,
+        pathExtension: path.extname(safePath),
+      }, 'Format decision');
 
       let outputData: Buffer | Uint8Array;
       let size: number;
@@ -411,8 +436,9 @@ const loadDocumentContent: ToolDefinition = {
       // Decode base64 content
       const fileData = Buffer.from(content, 'base64');
 
-      // Detect JSON vs AASX
-      const isJson = filename.endsWith('.json') || fileData[0] === 0x7b; // 0x7b = '{'
+      // Detect JSON vs AASX using magic bytes
+      const detectedFormat = detectFormatFromBuffer(fileData);
+      const isJson = detectedFormat === 'json';
 
       let environment: Environment;
       let warnings: string[] = [];

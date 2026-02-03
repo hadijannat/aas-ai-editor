@@ -367,10 +367,25 @@ const importPdf: ToolDefinition = {
       // Parse structured fields
       const extractedFields = parseExtractedFields(fullText, targetFields);
 
-      // Generate patches if we have a target submodel context
+      // Generate patches - use full JSON Pointer paths if targetSubmodel is specified and document is loaded
+      const { session } = context;
+      let basePath = '';
+
+      if (targetSubmodel && session.documentState?.environment) {
+        const env = session.documentState.environment as Environment;
+        const submodelIndex = env.submodels?.findIndex(
+          sm => sm.idShort === targetSubmodel ||
+                sm.id === targetSubmodel ||
+                sm.semanticId?.keys?.[0]?.value === targetSubmodel
+        );
+        if (submodelIndex !== undefined && submodelIndex >= 0) {
+          basePath = `/submodels/${submodelIndex}/submodelElements`;
+        }
+      }
+
       const suggestedPatches = Object.entries(extractedFields).map(([field, value]) => ({
         op: 'replace' as const,
-        path: `/${field}/value`,
+        path: basePath ? `${basePath}/${field}/value` : `/${field}/value`,
         value,
         confidence: 0.7, // Heuristic extraction has moderate confidence
       }));

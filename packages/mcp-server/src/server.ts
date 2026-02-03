@@ -71,13 +71,14 @@ export async function startServer(): Promise<void> {
   app.use(cors(corsOptions));
 
   // Rate limiting - use IP only (X-Session-Id is untrusted user input)
+  // When TRUST_PROXY is enabled, express handles X-Forwarded-For parsing
   const limiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
     max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
     standardHeaders: true,
     legacyHeaders: false,
-    // Use default key generator (request IP) - handles IPv6 properly
-    validate: { xForwardedForHeader: false },
+    // Let express's trust proxy setting handle X-Forwarded-For validation
+    // When behind a reverse proxy, set TRUST_PROXY=true to get accurate client IPs
   });
   app.use('/mcp', limiter);
 
