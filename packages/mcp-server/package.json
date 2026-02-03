@@ -51,7 +51,7 @@
     "url": "https://github.com/aas-ai-editor/aas-ai-editor/issues"
   },
   "dependencies": {
-    "@aas-ai-editor/core": "^0.1.0",
+    "@aas-ai-editor/core": "workspace:*",
     "@anthropic-ai/sdk": "^0.30.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "cors": "^2.8.6",
