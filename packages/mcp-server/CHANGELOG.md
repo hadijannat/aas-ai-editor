@@ -1,5 +1,16 @@
 # @aas-ai-editor/mcp-server
 
+## 0.2.1
+
+### Patch Changes
+
+- b810ae2: Add README documentation for npm packages
+  - Core package now includes comprehensive API documentation on npmjs.com
+  - MCP server README enhanced with Quick Start, Claude Code integration, and troubleshooting
+
+- Updated dependencies [b810ae2]
+  - @aas-ai-editor/core@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
