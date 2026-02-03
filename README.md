@@ -12,6 +12,12 @@
   <a href="https://github.com/hadijannat/aas-ai-editor/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
   </a>
+  <a href="https://www.npmjs.com/package/@aas-ai-editor/core">
+    <img src="https://img.shields.io/npm/v/@aas-ai-editor/core.svg?label=core" alt="npm core">
+  </a>
+  <a href="https://www.npmjs.com/package/@aas-ai-editor/mcp-server">
+    <img src="https://img.shields.io/npm/v/@aas-ai-editor/mcp-server.svg?label=mcp-server" alt="npm mcp-server">
+  </a>
   <img src="https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js&logoColor=white" alt="Node.js">
   <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js&logoColor=white" alt="Vue 3">
@@ -33,7 +39,41 @@ Creating and maintaining **Asset Administration Shells (AAS)** is complex—they
 
 ---
 
-## Quick Start
+## Install from npm
+
+Use the packages standalone without cloning the repository:
+
+### MCP Server (for Claude integration)
+
+```bash
+# Run directly with npx
+npx @aas-ai-editor/mcp-server
+
+# Or add to Claude Code
+claude mcp add aas-editor npx @aas-ai-editor/mcp-server
+```
+
+### Core Library (for your own projects)
+
+```bash
+npm install @aas-ai-editor/core
+```
+
+```typescript
+import { readAasx, writeAasx } from '@aas-ai-editor/core/aasx';
+import { selectSubmodelBySemanticId } from '@aas-ai-editor/core/aas';
+
+const { environment } = await readAasx(aasxBuffer);
+const nameplate = selectSubmodelBySemanticId(environment, 'https://admin-shell.io/...');
+```
+
+See the [core package documentation](https://www.npmjs.com/package/@aas-ai-editor/core) for full API reference.
+
+---
+
+## Development Setup
+
+For contributors who want to run the full application locally.
 
 ### Prerequisites
 
@@ -41,7 +81,7 @@ Creating and maintaining **Asset Administration Shells (AAS)** is complex—they
 - Python 3.11+ (for deep validation)
 - An [Anthropic API key](https://console.anthropic.com/)
 
-### Get Running
+### Clone and Run
 
 ```bash
 # Clone the repository

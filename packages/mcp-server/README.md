@@ -1,5 +1,8 @@
 # @aas-ai-editor/mcp-server
 
+[![npm version](https://img.shields.io/npm/v/@aas-ai-editor/mcp-server.svg)](https://www.npmjs.com/package/@aas-ai-editor/mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 MCP (Model Context Protocol) server for AI-assisted editing of Asset Administration Shell (AAS) packages. This server enables Claude and other AI assistants to read, validate, and modify AASX files through a standardized protocol.
 
 ## Features
@@ -9,6 +12,20 @@ MCP (Model Context Protocol) server for AI-assisted editing of Asset Administrat
 - **Patch-based editing** with full undo/redo support
 - **IDTA template validation** for industry-standard submodels
 - **Session management** with security hardening
+
+## Quick Start
+
+Get up and running in 3 steps:
+
+```bash
+# 1. Run the server
+npx @aas-ai-editor/mcp-server
+
+# 2. The server starts on http://localhost:3001
+#    Health check: curl http://localhost:3001/health
+
+# 3. Connect your AI client (see Claude integration below)
+```
 
 ## Installation
 
@@ -28,6 +45,27 @@ aas-mcp-server
 ```bash
 docker pull hadijannat/aas-mcp-server
 docker run -p 3001:3001 hadijannat/aas-mcp-server
+```
+
+## Claude Code Integration
+
+Add to your Claude Code configuration:
+
+```bash
+claude mcp add aas-editor npx @aas-ai-editor/mcp-server
+```
+
+Or manually edit `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "aas-editor": {
+      "command": "npx",
+      "args": ["@aas-ai-editor/mcp-server"]
+    }
+  }
+}
 ```
 
 ## Claude Desktop Integration
@@ -150,10 +188,40 @@ curl -X POST http://localhost:3001/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
 ```
 
+## Troubleshooting
+
+### Server won't start
+
+```bash
+# Check if port is in use
+lsof -i :3001
+
+# Use a different port
+MCP_PORT=3002 npx @aas-ai-editor/mcp-server
+```
+
+### Claude can't connect
+
+1. Verify the server is running: `curl http://localhost:3001/health`
+2. Check your config file path and JSON syntax
+3. Restart Claude Desktop/Claude Code after config changes
+
+### Permission denied errors
+
+Set `MCP_ALLOWED_PATHS` to include your AASX file directories:
+
+```bash
+MCP_ALLOWED_PATHS=/Users/yourname/documents,/tmp npx @aas-ai-editor/mcp-server
+```
+
+### Deep validation not working
+
+Deep validation requires the Python validation service. For standalone use, `validate_fast` provides structural validation without additional dependencies.
+
 ## Related Packages
 
-- [`@aas-ai-editor/core`](../core) - Core AASX parsing and patch operations
-- [`@aas-ai-editor/web-ui`](../web-ui) - Browser-based editor UI
+- [`@aas-ai-editor/core`](https://www.npmjs.com/package/@aas-ai-editor/core) - Core AASX parsing and patch operations
+- [AAS AI Editor](https://github.com/hadijannat/aas-ai-editor) - Full application with web UI
 
 ## License
 
