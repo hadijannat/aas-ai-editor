@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@aas-ai-editor/core": "workspace:*",
-    "@anthropic-ai/sdk": "^0.30.0",
+    "@anthropic-ai/sdk": "^0.72.1",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "express": "^4.21.0",
     "mammoth": "^1.11.0",
