@@ -155,17 +155,26 @@ async function sendMessage(content?: string) {
         }
       }
     } else {
-      // Check if it's an API key error
-      if (result.error?.includes('ANTHROPIC_API_KEY')) {
+      // Check if it's an API key error or AI unavailable
+      const errorMsg = result.error || 'AI service unavailable';
+      if (errorMsg.includes('ANTHROPIC_API_KEY') || errorMsg.includes('AI features require')) {
         aiAvailable.value = false;
-        assistantMessage.content = getFallbackHelpMessage(result.error);
+        // Fall back to pattern-matching mode
+        await processFallbackMessage(messageContent, assistantMessage);
+        return;
       } else {
-        assistantMessage.content = `Error: ${result.error}`;
+        assistantMessage.content = `Error: ${errorMsg}`;
       }
       assistantMessage.pending = false;
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    // If connection failed, try fallback mode
+    if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('ECONNREFUSED')) {
+      aiAvailable.value = false;
+      await processFallbackMessage(messageContent, assistantMessage);
+      return;
+    }
     assistantMessage.content = `Connection error: ${errorMessage}`;
     assistantMessage.pending = false;
   } finally {
@@ -511,10 +520,13 @@ if (messages.value.length === 0) {
 
       <div class="input-container">
         <input
+          id="ai-chat-input"
           v-model="inputValue"
+          name="ai-chat-input"
           type="text"
           class="chat-input"
           placeholder="Ask about your document..."
+          autocomplete="off"
           :disabled="isProcessing"
           @keydown.enter="sendMessage()"
         />
