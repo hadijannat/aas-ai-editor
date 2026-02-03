@@ -1,5 +1,14 @@
 # @aas-ai-editor/core
 
+## 0.2.3
+
+### Patch Changes
+
+- Improve XML parsing and add AI sidebar
+  - Add namespace-aware XML property helpers for better AAS v3 XML support
+  - Support additional XML variations (aas:aasenv, identification fields)
+  - Add AI Chat Panel sidebar to main application layout
+
 ## 0.2.2
 
 ### Patch Changes
