@@ -74,8 +74,10 @@ export function loadConfig(): ServerConfig {
 export function validateConfig(config: ServerConfig): string[] {
   const errors: string[] = [];
 
-  if (!config.ai.apiKey) {
-    errors.push('ANTHROPIC_API_KEY environment variable is required');
+  // ANTHROPIC_API_KEY is optional - only needed for AI-assisted features like auto-fix
+  // When running as MCP server for Claude Desktop, the client provides its own AI
+  if (!config.ai.apiKey && process.env.NODE_ENV === 'production') {
+    console.warn('Warning: ANTHROPIC_API_KEY not set. AI-assisted features (auto-fix) will be disabled.');
   }
 
   // Check for NaN values from parseInt before numeric comparisons

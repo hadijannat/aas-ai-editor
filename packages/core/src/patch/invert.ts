@@ -2,7 +2,8 @@
  * Patch inversion for undo support
  */
 
-import { getValueByPointer } from 'fast-json-patch';
+import fastJsonPatch from 'fast-json-patch';
+const { getValueByPointer } = fastJsonPatch;
 import type { AasPatchOp } from './schema.js';
 
 /**

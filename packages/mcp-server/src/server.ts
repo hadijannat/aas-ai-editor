@@ -76,7 +76,8 @@ export async function startServer(): Promise<void> {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10),
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => req.ip || 'unknown',
+    // Use default key generator (request IP) - handles IPv6 properly
+    validate: { xForwardedForHeader: false },
   });
   app.use('/mcp', limiter);
 

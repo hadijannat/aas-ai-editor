@@ -12,13 +12,11 @@
 import { readFile } from 'node:fs/promises';
 import { extname } from 'node:path';
 import * as XLSX from 'xlsx';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+// pdfjs-dist is loaded dynamically to avoid browser API errors in Node.js
+// import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 import type { Submodel, SubmodelElement, Environment, Reference, Key } from '@aas-ai-editor/core';
 import { readAasx, calculateDiff } from '@aas-ai-editor/core';
 import type { ToolDefinition, ToolResult } from '../types.js';
-
-// Disable worker for server-side use
-GlobalWorkerOptions.workerSrc = '';
 
 /**
  * Template metadata from registry
@@ -200,8 +198,13 @@ function generateSubmodelFromTemplate(
  * Extract text content from a PDF file
  */
 async function extractPdfText(pdfBuffer: Buffer, pages?: number[]): Promise<{ pages: Array<{ pageNumber: number; text: string }> }> {
+  // Dynamic import to avoid browser API errors at startup
+  // Note: pdfjs-dist requires the legacy build for Node.js environments
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = '';
+
   const data = new Uint8Array(pdfBuffer);
-  const pdf = await getDocument({ data, useSystemFonts: true }).promise;
+  const pdf = await pdfjs.getDocument({ data, useSystemFonts: true }).promise;
 
   const result: Array<{ pageNumber: number; text: string }> = [];
   const totalPages = pdf.numPages;

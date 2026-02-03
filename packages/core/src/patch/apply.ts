@@ -2,7 +2,9 @@
  * Patch application
  */
 
-import { applyPatch as jsonPatchApply, type Operation } from 'fast-json-patch';
+import fastJsonPatch from 'fast-json-patch';
+import type { Operation } from 'fast-json-patch';
+const { applyPatch: jsonPatchApply } = fastJsonPatch;
 import { type AasPatchOp, type PatchResult, validatePatchOp } from './schema.js';
 import { invertPatch } from './invert.js';
 
