@@ -3,6 +3,7 @@ Health Check Routes
 """
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter
 
@@ -12,10 +13,10 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Cache the validation engine status at startup
-_aas_test_engines_status: dict | None = None
+_aas_test_engines_status: dict[str, Any] | None = None
 
 
-def _check_aas_test_engines() -> dict:
+def _check_aas_test_engines() -> dict[str, Any]:
     """Check if aas-test-engines is properly loaded and working."""
     global _aas_test_engines_status
 
@@ -26,7 +27,7 @@ def _check_aas_test_engines() -> dict:
         from aas_test_engines import file as aas_file
 
         supported = aas_file.supported_versions()
-        latest = aas_file.latest_version()
+        latest = aas_file.latest_version()  # type: ignore[no-untyped-call]
 
         _aas_test_engines_status = {
             "available": True,
@@ -50,7 +51,7 @@ def _check_aas_test_engines() -> dict:
 
 
 @router.get("/health")
-async def health_check() -> dict:
+async def health_check() -> dict[str, Any]:
     """Health check endpoint."""
     return {
         "status": "healthy",
@@ -59,7 +60,7 @@ async def health_check() -> dict:
 
 
 @router.get("/ready")
-async def readiness_check() -> dict:
+async def readiness_check() -> dict[str, Any]:
     """
     Readiness check endpoint.
 

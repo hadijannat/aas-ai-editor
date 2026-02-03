@@ -26,7 +26,7 @@ class AasValidator:
         """Initialize validator and verify aas-test-engines is available."""
         # Verify the library is working by checking supported versions
         self._supported_versions = aas_file.supported_versions()
-        self._latest_version = aas_file.latest_version()
+        self._latest_version = aas_file.latest_version()  # type: ignore[no-untyped-call]
         logger.info(
             f"AAS Test Engines initialized. Supported versions: {self._supported_versions}, "
             f"Latest: {self._latest_version}"
@@ -110,7 +110,7 @@ class AasValidator:
         try:
             # Use aas-test-engines to validate the AASX directly
             with io.BytesIO(content) as f:
-                result = aas_file.check_aasx_file(f, version=self._latest_version)
+                result = aas_file.check_aasx_file(f, version=self._latest_version)  # type: ignore[arg-type]
 
             # Parse the validation result
             self._parse_aas_test_result(result, errors, warnings, info)
