@@ -54,7 +54,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request' && vars.DOCKERHUB_ENABLED == 'true'
+        if: github.event_name != 'pull_request' && secrets.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@v3
         with:
           registry: ${{ env.DOCKERHUB_REGISTRY }}
@@ -75,7 +75,7 @@ jobs:
 
       - name: Extract metadata for Docker Hub
         id: meta-dockerhub
-        if: vars.DOCKERHUB_ENABLED == 'true'
+        if: secrets.DOCKERHUB_USERNAME != ''
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.DOCKERHUB_REGISTRY }}/${{ matrix.dockerhub }}
@@ -92,9 +92,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ steps.meta-ghcr.outputs.tags }}
-            ${{ steps.meta-dockerhub.outputs.tags }}
+          tags: ${{ steps.meta-ghcr.outputs.tags }}
           labels: ${{ steps.meta-ghcr.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
