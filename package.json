@@ -7,7 +7,7 @@
   "author": "AAS AI Editor Team",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/aas-ai-editor.git"
+    "url": "https://github.com/hadijannat/aas-ai-editor.git"
   },
   "engines": {
     "node": ">=20.0.0",

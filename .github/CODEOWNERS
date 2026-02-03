@@ -2,23 +2,4 @@
 # These owners will be requested for review when someone opens a PR
 
 # Default owners for everything
-* @your-org/aas-ai-editor-maintainers
-
-# Package-specific owners
-/packages/core/ @your-org/core-team
-/packages/mcp-server/ @your-org/backend-team
-/packages/web-ui/ @your-org/frontend-team
-/packages/validation-service/ @your-org/validation-team
-
-# Documentation
-/docs/ @your-org/docs-team
-*.md @your-org/docs-team
-
-# CI/CD and infrastructure
-/.github/ @your-org/devops-team
-/docker/ @your-org/devops-team
-turbo.json @your-org/devops-team
-
-# Security-sensitive files
-/.github/workflows/ @your-org/security-team @your-org/devops-team
-/docs/architecture/SECURITY.md @your-org/security-team
+* @hadijannat

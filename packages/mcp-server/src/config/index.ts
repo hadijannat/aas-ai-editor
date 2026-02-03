@@ -46,8 +46,8 @@ export function loadConfig(): ServerConfig {
     },
 
     session: {
-      timeoutMs: parseInt(process.env.SESSION_TIMEOUT_MS || '1800000', 10), // 30 min
-      maxSessions: parseInt(process.env.MAX_SESSIONS || '100', 10),
+      timeoutMs: parseInt(process.env.MCP_SESSION_TIMEOUT_MS || '1800000', 10), // 30 min
+      maxSessions: parseInt(process.env.MCP_MAX_SESSIONS || '100', 10),
     },
 
     ai: {
@@ -80,6 +80,14 @@ export function validateConfig(config: ServerConfig): string[] {
 
   if (config.server.port < 1 || config.server.port > 65535) {
     errors.push('MCP_SERVER_PORT must be between 1 and 65535');
+  }
+
+  if (config.session.timeoutMs !== undefined && config.session.timeoutMs <= 0) {
+    errors.push('MCP_SESSION_TIMEOUT_MS must be positive');
+  }
+
+  if (config.session.maxSessions !== undefined && config.session.maxSessions <= 0) {
+    errors.push('MCP_MAX_SESSIONS must be positive');
   }
 
   return errors;

@@ -38,7 +38,7 @@ packages/
 
 ```bash
 # Clone and install
-git clone https://github.com/your-org/aas-ai-editor.git
+git clone https://github.com/hadijannat/aas-ai-editor.git
 cd aas-ai-editor
 pnpm install
 
@@ -65,7 +65,7 @@ docker compose up -d
 
 ## Package Overview
 
-### @aas-editor/core
+### @aas-ai-editor/core
 
 TypeScript library for AAS operations:
 - AASX package parsing (OPC/ZIP)
@@ -73,7 +73,7 @@ TypeScript library for AAS operations:
 - AAS-aware diff algorithms
 - IDTA template registry
 
-### @aas-editor/mcp-server
+### @aas-ai-editor/mcp-server
 
 MCP server with Claude AI integration:
 - Streamable HTTP transport
@@ -81,7 +81,7 @@ MCP server with Claude AI integration:
 - Session management
 - Approval workflow for patches
 
-### @aas-editor/web-ui
+### @aas-ai-editor/web-ui
 
 Vue 3 single-page application:
 - Tree navigation component
