@@ -148,7 +148,7 @@ const validateDeep: ToolDefinition = {
       }
 
       // Call the validation service
-      const response = await fetch(`${validationServiceUrl}/validate`, {
+      const response = await fetch(`${validationServiceUrl}/validate/json`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -877,24 +877,25 @@ const selfCorrectingLoop: ToolDefinition = {
         'Error categorization complete'
       );
 
-      // Step 3: Apply high-confidence fixes if enabled
-      let fixesAppliedThisIteration = 0;
+      // Step 3: Queue high-confidence fixes as pending operations (requires approval)
+      let fixesQueuedThisIteration = 0;
       if (applyFixes && fixSuggestions.length > 0) {
         const highConfidenceFixes = fixSuggestions.filter((f) => f.confidence === 'high');
 
+        // Instead of direct mutation, add fixes to pending operations for approval
         for (const fix of highConfidenceFixes) {
-          try {
-            // Apply patch to environment (simple replace/add)
-            const { path, value, op } = fix.patch;
-            if (op === 'add' || op === 'replace') {
-              setNestedValue(currentEnv, path, value);
-              fixesAppliedThisIteration++;
-              totalFixesApplied++;
-              logger.debug({ path, op }, 'Applied fix');
-            }
-          } catch (err) {
-            logger.warn({ error: err, path: fix.patch.path }, 'Failed to apply fix');
-          }
+          const operationId = `auto-fix-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          session.pendingOperations.push({
+            id: operationId,
+            toolName: 'validate_self_correct',
+            patches: [fix.patch],
+            approvalTier: 2, // Medium tier for AI-generated fixes
+            reason: fix.explanation,
+            createdAt: new Date(),
+          });
+          fixesQueuedThisIteration++;
+          totalFixesApplied++; // Count as "applied" for iteration tracking
+          logger.debug({ path: fix.patch.path, operationId }, 'Queued fix for approval');
         }
       }
 
@@ -906,7 +907,7 @@ const selfCorrectingLoop: ToolDefinition = {
         errorCount: errors.length,
         warningCount: validationResult.warnings.length,
         fixesGenerated: fixSuggestions.length,
-        fixesApplied: fixesAppliedThisIteration,
+        fixesApplied: fixesQueuedThisIteration,
         remainingErrors: unfixableErrors,
       });
 
@@ -916,9 +917,9 @@ const selfCorrectingLoop: ToolDefinition = {
         break;
       }
 
-      // If we applied no fixes this iteration, stop to avoid infinite loop
-      if (applyFixes && fixesAppliedThisIteration === 0) {
-        logger.warn('No fixes applied this iteration, stopping to avoid infinite loop');
+      // If we queued no fixes this iteration, stop to avoid infinite loop
+      if (applyFixes && fixesQueuedThisIteration === 0) {
+        logger.warn('No fixes queued this iteration, stopping to avoid infinite loop');
         break;
       }
     }
@@ -949,59 +950,31 @@ const selfCorrectingLoop: ToolDefinition = {
         }
       : null;
 
+    // Calculate pending operation count
+    const pendingFixCount = session.pendingOperations.filter(
+      (op) => op.toolName === 'validate_self_correct'
+    ).length;
+
     return {
       success: true,
       data: {
         status: hasRemainingErrors ? 'partial' : 'valid',
         message: hasRemainingErrors
           ? `Completed ${iterations.length} iteration(s). ${lastIteration.remainingErrors.length} error(s) require manual intervention.`
-          : `Document is valid after ${iterations.length} iteration(s) with ${totalFixesApplied} fix(es) applied.`,
+          : applyFixes && pendingFixCount > 0
+            ? `Generated ${pendingFixCount} fix(es) pending approval. Use edit_approve to apply them.`
+            : `Document is valid after ${iterations.length} iteration(s).`,
         iterations,
-        finalValid: !hasRemainingErrors,
+        finalValid: !hasRemainingErrors && pendingFixCount === 0,
         allGeneratedPatches,
         totalFixesApplied,
+        pendingApprovalCount: pendingFixCount,
         escalation,
         pendingPatches: applyFixes ? [] : allGeneratedPatches,
       },
     };
   },
 };
-
-/**
- * Set a nested value in an object using a JSON Pointer path
- */
-function setNestedValue(obj: unknown, path: string, value: unknown): void {
-  if (!path || path === '/') {
-    throw new Error('Cannot set root object');
-  }
-
-  const parts = path.split('/').filter(Boolean);
-  let current = obj as Record<string, unknown>;
-
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
-    if (Array.isArray(current)) {
-      const index = parseInt(part, 10);
-      if (isNaN(index)) throw new Error(`Invalid array index: ${part}`);
-      current = current[index] as Record<string, unknown>;
-    } else if (typeof current === 'object' && current !== null) {
-      current = current[part] as Record<string, unknown>;
-    } else {
-      throw new Error(`Cannot traverse path: ${path} at ${part}`);
-    }
-  }
-
-  const lastPart = parts[parts.length - 1];
-  if (Array.isArray(current)) {
-    const index = parseInt(lastPart, 10);
-    if (isNaN(index)) throw new Error(`Invalid array index: ${lastPart}`);
-    current[index] = value as unknown;
-  } else if (typeof current === 'object' && current !== null) {
-    current[lastPart] = value;
-  } else {
-    throw new Error(`Cannot set value at path: ${path}`);
-  }
-}
 
 export const validateTools: ToolDefinition[] = [
   validateFast,

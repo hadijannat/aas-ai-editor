@@ -16,9 +16,22 @@ export function invertPatch<T>(document: T, patch: AasPatchOp): AasPatchOp | und
   switch (patch.op) {
     case 'add': {
       // Inverse of add is remove
+      let removePath = patch.path;
+
+      // Handle array append case: `/-` means "append to array"
+      // The inverse needs the actual index where the element will be added
+      if (patch.path.endsWith('/-')) {
+        const parentPath = patch.path.slice(0, -2);
+        const parent = parentPath ? getValueByPointer(document, parentPath) : document;
+        if (Array.isArray(parent)) {
+          // After the add, the element will be at index = current length
+          removePath = `${parentPath}/${parent.length}`;
+        }
+      }
+
       return {
         op: 'remove',
-        path: patch.path,
+        path: removePath,
         reason: `Undo: ${patch.reason || 'add operation'}`,
       };
     }

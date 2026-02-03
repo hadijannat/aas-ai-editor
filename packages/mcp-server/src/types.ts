@@ -59,6 +59,9 @@ export interface DocumentState {
 
   /** Redo stack */
   redoStack: unknown[];
+
+  /** Supplementary files from AASX package (thumbnails, PDFs, etc.) */
+  supplementaryFiles?: Map<string, Uint8Array>;
 }
 
 /**

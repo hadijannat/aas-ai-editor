@@ -123,7 +123,7 @@ export const useDocumentStore = defineStore('document', () => {
    */
   async function loadEnvironment() {
     try {
-      const env = await mcpService.readResource(`aas://environment`);
+      const env = await mcpService.readResource(`aas://document/environment`);
       environment.value = env as Record<string, unknown>;
     } catch (error) {
       console.error('Failed to load environment resource:', error);
@@ -134,6 +134,25 @@ export const useDocumentStore = defineStore('document', () => {
     const notificationStore = useNotificationStore();
 
     try {
+      // If content-loaded document (browser upload), trigger browser download
+      if (documentId.value?.startsWith('content://') && !path) {
+        const result = await mcpService.callTool('document_export', {});
+        if (result.success && result.data) {
+          const exportData = result.data as {
+            content: string;
+            mimeType: string;
+            filename: string;
+          };
+          downloadBase64(exportData.content, exportData.filename, exportData.mimeType);
+          isDirty.value = false;
+          notificationStore.success('Document downloaded');
+          return;
+        }
+        notificationStore.error(result.error || 'Failed to export document');
+        return;
+      }
+
+      // Server-side save for file-based documents
       const result = await mcpService.callTool('document_save', { path });
 
       if (result.success) {
@@ -143,6 +162,26 @@ export const useDocumentStore = defineStore('document', () => {
     } catch (_error) {
       notificationStore.error('Failed to save document');
     }
+  }
+
+  /**
+   * Download base64-encoded content as a file in the browser
+   */
+  function downloadBase64(base64Content: string, filename: string, mimeType: string) {
+    const binaryString = atob(base64Content);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   async function undo() {
@@ -173,6 +212,9 @@ export const useDocumentStore = defineStore('document', () => {
       const pendingData = pending.data as { pending: PendingOperation[] };
       pendingOperations.value = pendingData.pending;
     }
+
+    // Reload environment to reflect changes from undo/redo/approval
+    await loadEnvironment();
   }
 
   async function approveOperations(ids: string[]) {

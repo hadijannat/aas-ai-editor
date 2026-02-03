@@ -19,7 +19,8 @@ export const useSelectionStore = defineStore('selection', () => {
   const selected = ref<Selection | null>(null);
 
   // Computed
-  const selectedId = computed(() => selected.value?.id ?? null);
+  // Use path as the primary identifier for selection matching (handles duplicate idShorts)
+  const selectedId = computed(() => selected.value?.path ?? selected.value?.id ?? null);
   const selectedType = computed(() => selected.value?.type ?? null);
   const hasSelection = computed(() => selected.value !== null);
 

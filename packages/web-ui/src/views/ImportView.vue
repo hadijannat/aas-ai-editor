@@ -52,23 +52,32 @@ async function handleImport() {
 
   try {
     // Read file as base64
-    const content = await readFileAsBase64(file.value);
+    const base64Content = await readFileAsBase64(file.value);
 
     // Build params based on import type
+    // All import tools accept base64Content for browser uploads
     const params: Record<string, unknown> = {
-      content,
-      filename: file.value.name,
+      base64Content,
     };
 
     // Add type-specific params
-    if (importType.value === 'pdf') {
-      params.pdfPath = `upload://${file.value.name}`;
-    } else if (importType.value === 'spreadsheet') {
-      params.filePath = `upload://${file.value.name}`;
+    if (importType.value === 'spreadsheet') {
+      // Spreadsheet tool needs fileType hint for base64 content
+      const ext = file.value.name.split('.').pop()?.toLowerCase();
+      if (ext === 'csv' || ext === 'xlsx' || ext === 'xls') {
+        params.fileType = ext;
+      }
     } else if (importType.value === 'image') {
-      params.imagePath = `upload://${file.value.name}`;
-    } else if (importType.value === 'aas') {
-      params.sourcePath = `upload://${file.value.name}`;
+      // Image tool needs mimeType hint
+      const ext = file.value.name.split('.').pop()?.toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        webp: 'image/webp',
+        gif: 'image/gif',
+      };
+      params.mimeType = mimeTypes[ext || ''] || 'image/png';
     }
 
     const result = await mcpService.callTool(toolName.value, params);

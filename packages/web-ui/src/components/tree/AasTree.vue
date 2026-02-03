@@ -47,14 +47,17 @@ const treeNodes = computed(() => {
       id: 'aas-section',
       label: 'Asset Administration Shells',
       icon: '🏭',
-      children: shells.map((aas, index) => ({
-        id: aas.id,
-        label: aas.idShort || aas.id,
-        icon: '📋',
-        type: 'AssetAdministrationShell',
-        data: aas,
-        path: `/assetAdministrationShells/${index}`,
-      })),
+      children: shells.map((aas, index) => {
+        const nodePath = `/assetAdministrationShells/${index}`;
+        return {
+          id: nodePath, // Use path as unique id instead of aas.id
+          label: aas.idShort || aas.id,
+          icon: '📋',
+          type: 'AssetAdministrationShell',
+          data: aas,
+          path: nodePath,
+        };
+      }),
     });
   }
 
@@ -68,7 +71,7 @@ const treeNodes = computed(() => {
       children: submodels.map((sm, index) => {
         const basePath = `/submodels/${index}`;
         return {
-          id: sm.id,
+          id: basePath, // Use path as unique id instead of sm.id
           label: sm.idShort || sm.id,
           icon: '📄',
           type: 'Submodel',
@@ -88,7 +91,7 @@ function buildElementTree(elements: unknown[], basePath: string): TreeNodeData[]
     const element = el as { idShort?: string; modelType?: string; value?: unknown[] };
     const elementPath = `${basePath}/${index}`;
     const node: TreeNodeData = {
-      id: element.idShort || `element-${index}`,
+      id: elementPath, // Use path as unique id to handle duplicate idShorts
       label: element.idShort || 'Unknown',
       icon: getElementIcon(element.modelType),
       type: element.modelType || 'Unknown',

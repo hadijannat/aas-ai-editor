@@ -114,13 +114,18 @@ const commands: Command[] = [
     category: 'generate',
     action: async () => {
       const selected = selectionStore.selected;
-      if (!selected?.path) {
+      if (!selected) {
         emit('execute', { success: false, error: 'Select a submodel first' });
         return;
       }
       executionMessage.value = 'Analyzing submodel...';
+      // import_suggest_template expects templateId, not submodelPath
+      // Use the submodel's semanticId or idShort as a hint for template lookup
+      const data = selected.data as { semanticId?: { keys?: { value: string }[] }; idShort?: string };
+      const semanticId = data?.semanticId?.keys?.[0]?.value;
+      const idShort = data?.idShort;
       const result = await mcpService.callTool('import_suggest_template', {
-        submodelPath: selected.path,
+        templateId: semanticId || idShort || 'Digital Nameplate',
       });
       emit('execute', result);
     },
@@ -145,11 +150,11 @@ const commands: Command[] = [
     category: 'query',
     action: async () => {
       // This would open a secondary prompt for semantic ID input
-      // For now, list common ones
+      // For now, search for common IDTA namespace
       executionMessage.value = 'Searching...';
+      // Note: query_find_by_semantic_id does exact match only, no partialMatch support
       const result = await mcpService.callTool('query_find_by_semantic_id', {
-        semanticId: 'https://admin-shell.io/idta/',
-        partialMatch: true,
+        semanticId: 'https://admin-shell.io/zvei/nameplate/2/0/Nameplate',
       });
       emit('execute', result);
     },

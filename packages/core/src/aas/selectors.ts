@@ -124,7 +124,8 @@ export function getElementPath(
   let basePath = `/submodels/${submodelIndex}/submodelElements`;
   let current: SubmodelElement[] | undefined = submodel.submodelElements;
 
-  for (const part of parts) {
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
     if (!current) return undefined;
 
     const elementIndex = current.findIndex((sme) => sme.idShort === part);
@@ -135,7 +136,8 @@ export function getElementPath(
     const element = current[elementIndex];
     if (element.modelType === 'SubmodelElementCollection') {
       current = (element as SubmodelElementCollection).value;
-      if (parts.indexOf(part) < parts.length - 1) {
+      // Use loop index instead of indexOf to correctly handle duplicate idShorts
+      if (i < parts.length - 1) {
         basePath += '/value';
       }
     } else {

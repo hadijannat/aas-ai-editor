@@ -193,9 +193,14 @@ async function applyQuickFix(error: ValidationError) {
   autoFixInProgress.value = error.path;
 
   try {
+    // Pass error as array with correct parameter names
     const result = await mcpService.callTool('validate_auto_fix', {
-      targetPath: error.path,
-      maxFixes: 1,
+      errors: [{
+        path: error.path,
+        message: error.message,
+        severity: error.severity,
+      }],
+      maxAttempts: 1,
     });
 
     if (result.success) {

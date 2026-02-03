@@ -65,7 +65,7 @@ function handleClick() {
     <div v-if="hasChildren && isExpanded" class="node-children">
       <TreeNode
         v-for="child in node.children"
-        :key="child.id"
+        :key="child.path || child.id"
         :node="child"
         :depth="depth + 1"
         @select="emit('select', $event)"
