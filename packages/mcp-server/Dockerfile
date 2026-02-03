@@ -2,7 +2,7 @@
 # Multi-stage build for optimized production image
 
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ RUN pnpm --filter @aas-ai-editor/core build
 RUN pnpm --filter @aas-ai-editor/mcp-server build
 
 # Production stage
-FROM node:20-alpine AS production
+FROM node:25-alpine AS production
 
 WORKDIR /app
 
