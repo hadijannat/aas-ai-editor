@@ -312,10 +312,51 @@ function parseAasXml(xml: string): Environment {
 
   const result = parser.parse(xml);
 
+  // Debug: Log available root keys to help identify the XML structure
+  console.log('[parseAasXml] Parsed XML root keys:', Object.keys(result));
+
   // The root element could be "environment" or "aas:environment" etc.
-  const env = result.environment || result['aas:environment'] || result.Environment || result;
+  // Also check for common AAS v3 XML variations including namespaced versions
+  const env = result.environment
+    || result['aas:environment']
+    || result['aas:aasenv']           // Common namespace prefix for aasenv
+    || result.Environment
+    || result['aas:Environment']
+    || result['aas-env:environment']
+    || result['aas-env:aasenv']
+    || result.aasenv
+    || result;
+
+  console.log('[parseAasXml] Selected env keys:', Object.keys(env));
 
   return transformXmlToEnvironment(env);
+}
+
+/**
+ * Helper to get a property from XML object with namespace awareness
+ * Checks for: propName, aas:propName, and common variations
+ */
+function getXmlProp(obj: Record<string, unknown>, propName: string): unknown {
+  return obj[propName]
+    || obj[`aas:${propName}`]
+    || obj[`@_${propName}`]
+    || obj[propName.charAt(0).toUpperCase() + propName.slice(1)]  // PascalCase
+    || obj[`aas:${propName.charAt(0).toUpperCase() + propName.slice(1)}`];
+}
+
+/**
+ * Helper to get a string property with namespace awareness
+ * Also handles XML text content nodes (like <aas:identification>text</aas:identification>)
+ */
+function getXmlString(obj: Record<string, unknown>, propName: string): string {
+  const val = getXmlProp(obj, propName);
+  if (val == null) return '';
+  // Handle object with text content (e.g., <identification>value</identification>)
+  if (typeof val === 'object' && val !== null) {
+    const textVal = (val as Record<string, unknown>)['#text'];
+    if (textVal != null) return String(textVal);
+  }
+  return String(val);
 }
 
 /**
@@ -391,15 +432,16 @@ function extractXmlArray(value: unknown, childName: string): unknown[] {
  */
 function transformAas(xmlAas: unknown): AssetAdministrationShell {
   const aas = xmlAas as Record<string, unknown>;
+  const idShort = getXmlString(aas, 'idShort');
   return {
     modelType: 'AssetAdministrationShell',
-    id: String(aas.id || aas['@_id'] || ''),
-    idShort: aas.idShort as string | undefined,
-    assetInformation: transformAssetInformation(aas.assetInformation),
-    submodels: transformReferences(aas.submodels),
-    derivedFrom: aas.derivedFrom ? transformReference(aas.derivedFrom) : undefined,
-    description: transformLangStringSet(aas.description),
-    administration: aas.administration as { version?: string; revision?: string } | undefined,
+    id: getXmlString(aas, 'id') || getXmlString(aas, 'identification'),
+    idShort: idShort || undefined,
+    assetInformation: transformAssetInformation(getXmlProp(aas, 'assetInformation') || getXmlProp(aas, 'asset')),
+    submodels: transformReferences(getXmlProp(aas, 'submodels') || getXmlProp(aas, 'submodelRefs')),
+    derivedFrom: getXmlProp(aas, 'derivedFrom') ? transformReference(getXmlProp(aas, 'derivedFrom')) : undefined,
+    description: transformLangStringSet(getXmlProp(aas, 'description')),
+    administration: getXmlProp(aas, 'administration') as { version?: string; revision?: string } | undefined,
   };
 }
 
@@ -408,43 +450,49 @@ function transformAssetInformation(xmlInfo: unknown): AssetInformation {
     return { assetKind: 'Instance' };
   }
   const info = xmlInfo as Record<string, unknown>;
+  const assetKind = getXmlString(info, 'assetKind') || getXmlString(info, 'kind');
+  const globalAssetId = getXmlString(info, 'globalAssetId');
   return {
-    assetKind: (info.assetKind as 'Instance' | 'NotApplicable' | 'Type') || 'Instance',
-    globalAssetId: info.globalAssetId as string | undefined,
+    assetKind: (assetKind as 'Instance' | 'NotApplicable' | 'Type') || 'Instance',
+    globalAssetId: globalAssetId || undefined,
   };
 }
 
 function transformSubmodel(xmlSubmodel: unknown): Submodel {
   const sm = xmlSubmodel as Record<string, unknown>;
+  const idShort = getXmlString(sm, 'idShort');
+  const kind = getXmlString(sm, 'kind');
   return {
     modelType: 'Submodel',
-    id: String(sm.id || sm['@_id'] || ''),
-    idShort: sm.idShort as string | undefined,
-    semanticId: sm.semanticId ? transformReference(sm.semanticId) : undefined,
-    submodelElements: transformSubmodelElements(sm.submodelElements),
-    kind: sm.kind as 'Instance' | 'Template' | undefined,
-    description: transformLangStringSet(sm.description),
-    administration: sm.administration as { version?: string; revision?: string } | undefined,
+    id: getXmlString(sm, 'id') || getXmlString(sm, 'identification'),
+    idShort: idShort || undefined,
+    semanticId: getXmlProp(sm, 'semanticId') ? transformReference(getXmlProp(sm, 'semanticId')) : undefined,
+    submodelElements: transformSubmodelElements(getXmlProp(sm, 'submodelElements')),
+    kind: (kind as 'Instance' | 'Template') || undefined,
+    description: transformLangStringSet(getXmlProp(sm, 'description')),
+    administration: getXmlProp(sm, 'administration') as { version?: string; revision?: string } | undefined,
   };
 }
 
 function transformConceptDescription(xmlCd: unknown): ConceptDescription {
   const cd = xmlCd as Record<string, unknown>;
+  const idShort = getXmlString(cd, 'idShort');
   return {
     modelType: 'ConceptDescription',
-    id: String(cd.id || cd['@_id'] || ''),
-    idShort: cd.idShort as string | undefined,
-    description: transformLangStringSet(cd.description),
-    administration: cd.administration as { version?: string; revision?: string } | undefined,
+    id: getXmlString(cd, 'id') || getXmlString(cd, 'identification'),
+    idShort: idShort || undefined,
+    description: transformLangStringSet(getXmlProp(cd, 'description')),
+    administration: getXmlProp(cd, 'administration') as { version?: string; revision?: string } | undefined,
   };
 }
 
 function transformReference(xmlRef: unknown): Reference | undefined {
   if (!xmlRef || typeof xmlRef !== 'object') return undefined;
   const ref = xmlRef as Record<string, unknown>;
+  const refType = getXmlString(ref, 'type');
   return {
-    type: (ref.type as 'ExternalReference' | 'ModelReference') || 'ModelReference',
-    keys: transformKeys(ref.keys),
+    type: (refType as 'ExternalReference' | 'ModelReference') || 'ModelReference',
+    keys: transformKeys(getXmlProp(ref, 'keys')),
   };
 }
 
@@ -513,9 +561,11 @@ function transformSingleKey(k: unknown): Key {
     return { type: '' as KeyType, value: String(k || '') };
   }
   const obj = k as Record<string, unknown>;
+  const keyType = getXmlString(obj, 'type');
+  const keyValue = getXmlString(obj, 'value') || String(obj['#text'] || '');
   return {
-    type: String(obj.type || obj['@_type'] || '') as KeyType,
-    value: String(obj.value || obj['#text'] || ''),
+    type: keyType as KeyType,
+    value: keyValue,
   };
 }
 
@@ -567,9 +617,11 @@ function transformSingleLangString(ls: unknown): { language: string; text: strin
     return { language: '', text: String(ls || '') };
   }
   const obj = ls as Record<string, unknown>;
+  const language = getXmlString(obj, 'language') || String(obj['@_language'] || obj['@_lang'] || '');
+  const text = getXmlString(obj, 'text') || String(obj['#text'] || '');
   return {
-    language: String(obj.language || obj['@_language'] || ''),
-    text: String(obj.text || obj['#text'] || ''),
+    language,
+    text,
   };
 }
 
@@ -608,13 +660,48 @@ function transformSubmodelElements(xmlSmes: unknown): SubmodelElement[] | undefi
 }
 
 function transformSubmodelElement(xmlSme: unknown): SubmodelElement {
-  const sme = xmlSme as Record<string, unknown>;
-  const modelType = (sme.modelType || sme['@_modelType'] || 'Property') as string;
+  let sme = xmlSme as Record<string, unknown>;
+
+  // AAS v2 XML wraps the actual element inside aas:property, aas:submodelElementCollection, etc.
+  // Check for these wrappers and extract the inner element
+  const elementTypes = [
+    'property', 'aas:property',
+    'submodelElementCollection', 'aas:submodelElementCollection',
+    'multiLanguageProperty', 'aas:multiLanguageProperty',
+    'file', 'aas:file',
+    'blob', 'aas:blob',
+    'referenceElement', 'aas:referenceElement',
+    'range', 'aas:range',
+    'entity', 'aas:entity',
+    'operation', 'aas:operation',
+    'capability', 'aas:capability',
+    'annotatedRelationshipElement', 'aas:annotatedRelationshipElement',
+    'relationshipElement', 'aas:relationshipElement',
+  ];
+
+  let detectedType = 'Property';
+  for (const elemType of elementTypes) {
+    if (sme[elemType] && typeof sme[elemType] === 'object') {
+      // Found a wrapped element - extract it and determine type
+      sme = sme[elemType] as Record<string, unknown>;
+      // Normalize the type name (remove aas: prefix, capitalize first letter)
+      const typeName = elemType.replace('aas:', '');
+      detectedType = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+      break;
+    }
+  }
+
+  const modelType = getXmlString(sme, 'modelType') || detectedType;
+  const idShort = getXmlString(sme, 'idShort');
+  const semanticIdProp = getXmlProp(sme, 'semanticId');
+  const valueProp = getXmlProp(sme, 'value');
+  const valueTypeProp = getXmlString(sme, 'valueType') || 'xs:string';
+  const contentTypeProp = getXmlString(sme, 'contentType') || 'application/octet-stream';
 
   const base = {
-    idShort: sme.idShort as string | undefined,
-    semanticId: sme.semanticId ? transformReference(sme.semanticId) : undefined,
-    description: transformLangStringSet(sme.description),
+    idShort: idShort || undefined,
+    semanticId: semanticIdProp ? transformReference(semanticIdProp) : undefined,
+    description: transformLangStringSet(getXmlProp(sme, 'description')),
   };
 
   switch (modelType) {
@@ -622,48 +709,48 @@ function transformSubmodelElement(xmlSme: unknown): SubmodelElement {
       return {
         ...base,
         modelType: 'Property' as const,
-        valueType: ((sme.valueType as string) || 'xs:string') as ValueType,
-        value: sme.value as string | undefined,
+        valueType: valueTypeProp as ValueType,
+        value: valueProp != null ? String(valueProp) : undefined,
       };
     case 'SubmodelElementCollection':
       return {
         ...base,
         modelType: 'SubmodelElementCollection' as const,
-        value: transformSubmodelElements(sme.value),
+        value: transformSubmodelElements(valueProp),
       };
     case 'MultiLanguageProperty':
       return {
         ...base,
         modelType: 'MultiLanguageProperty' as const,
-        value: transformLangStringSet(sme.value),
+        value: transformLangStringSet(valueProp),
       };
     case 'File':
       return {
         ...base,
         modelType: 'File' as const,
-        contentType: (sme.contentType as string) || 'application/octet-stream',
-        value: sme.value as string | undefined,
+        contentType: contentTypeProp,
+        value: valueProp != null ? String(valueProp) : undefined,
       };
     case 'Blob':
       return {
         ...base,
         modelType: 'Blob' as const,
-        contentType: (sme.contentType as string) || 'application/octet-stream',
-        value: sme.value as string | undefined,
+        contentType: contentTypeProp,
+        value: valueProp != null ? String(valueProp) : undefined,
       };
     case 'ReferenceElement':
       return {
         ...base,
         modelType: 'ReferenceElement' as const,
-        value: sme.value ? transformReference(sme.value) : undefined,
+        value: valueProp ? transformReference(valueProp) : undefined,
       };
     case 'Range':
       return {
         ...base,
         modelType: 'Range' as const,
-        valueType: ((sme.valueType as string) || 'xs:string') as ValueType,
-        min: sme.min as string | undefined,
-        max: sme.max as string | undefined,
+        valueType: valueTypeProp as ValueType,
+        min: getXmlString(sme, 'min') || undefined,
+        max: getXmlString(sme, 'max') || undefined,
       };
     default:
       // Default to Property for unknown types
@@ -671,7 +758,7 @@ function transformSubmodelElement(xmlSme: unknown): SubmodelElement {
         ...base,
         modelType: 'Property' as const,
         valueType: 'xs:string' as ValueType,
-        value: sme.value as string | undefined,
+        value: valueProp != null ? String(valueProp) : undefined,
       };
   }
 }
