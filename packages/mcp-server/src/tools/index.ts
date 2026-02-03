@@ -2,7 +2,7 @@
  * MCP Tools Registration
  *
  * Registers all available tools with the transport handler.
- * Tools are organized by domain: document, query, edit, validate, import.
+ * Tools are organized by domain: document, query, edit, validate, import, ai.
  */
 
 import type { TransportHandler } from '../transport/handler.js';
@@ -11,6 +11,7 @@ import { queryTools } from './query.js';
 import { editTools } from './edit.js';
 import { validateTools } from './validate.js';
 import { importTools } from './import.js';
+import { aiTools } from './ai.js';
 
 /**
  * Register all tools with the transport handler
@@ -38,6 +39,11 @@ export function registerTools(handler: TransportHandler): void {
 
   // Import tools
   for (const tool of importTools) {
+    handler.registerTool(tool);
+  }
+
+  // AI assistant tools
+  for (const tool of aiTools) {
     handler.registerTool(tool);
   }
 }

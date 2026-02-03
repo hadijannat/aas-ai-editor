@@ -6,7 +6,7 @@
  */
 
 import type { Request, Response } from 'express';
-import type { ServerContext, ToolDefinition, ResourceDefinition, PromptDefinition, ClientIdentity } from '../types.js';
+import type { ServerContext, ToolDefinition, ResourceDefinition, PromptDefinition, ClientIdentity, ToolContext, ToolResult } from '../types.js';
 import { validateToolInput } from '../security/validation.js';
 
 /**
@@ -27,6 +27,16 @@ export interface TransportHandler {
 
   /** Register a prompt */
   registerPrompt: (prompt: PromptDefinition) => void;
+
+  /** Get the tool registry for internal access */
+  getToolRegistry: () => Map<string, ToolDefinition>;
+
+  /** Call a tool internally (for AI tool calling) */
+  callToolInternal: (
+    toolName: string,
+    params: Record<string, unknown>,
+    toolContext: ToolContext
+  ) => Promise<ToolResult>;
 }
 
 /**
@@ -353,11 +363,38 @@ export function createTransportHandler(context: ServerContext): TransportHandler
     });
   }
 
+  /**
+   * Call a tool internally (for AI tool calling)
+   */
+  async function callToolInternal(
+    toolName: string,
+    params: Record<string, unknown>,
+    toolContext: ToolContext
+  ): Promise<ToolResult> {
+    const tool = tools.get(toolName);
+    if (!tool) {
+      return { success: false, error: `Unknown tool: ${toolName}` };
+    }
+
+    // Validate input parameters
+    const validation = validateToolInput(toolName, params);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: `Input validation failed: ${validation.errors?.join(', ')}`,
+      };
+    }
+
+    return tool.handler(params, toolContext);
+  }
+
   return {
     handleRequest,
     handleStream,
     registerTool: (tool) => tools.set(tool.name, tool),
     registerResource: (resource) => resources.set(resource.uri, resource),
     registerPrompt: (prompt) => prompts.set(prompt.name, prompt),
+    getToolRegistry: () => tools,
+    callToolInternal,
   };
 }

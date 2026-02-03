@@ -3,13 +3,17 @@
  * AiChatPanel - Tier 3: AI Chat/Agent Panel
  *
  * Conversational interface for AI-assisted editing.
- * Supports natural language queries and multi-turn conversations.
+ * Connects to Claude API via MCP ai_chat tool for intelligent,
+ * context-aware assistance with AAS documents.
  */
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 import { useMcpService } from '@/services/mcp';
 import { useDocumentStore } from '@/stores/document';
 import { storeToRefs } from 'pinia';
 
+/**
+ * Chat message with optional tool call information
+ */
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -19,11 +23,23 @@ interface Message {
   pending?: boolean;
 }
 
+/**
+ * Tool call made by the AI during processing
+ */
 interface ToolCall {
   name: string;
-  args: Record<string, unknown>;
+  input: Record<string, unknown>;
   result?: unknown;
-  status: 'pending' | 'success' | 'error';
+  success?: boolean;
+}
+
+/**
+ * Conversation message format for ai_chat tool
+ */
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  toolCalls?: ToolCall[];
 }
 
 defineProps<{
@@ -43,6 +59,10 @@ const messages = ref<Message[]>([]);
 const inputValue = ref('');
 const isProcessing = ref(false);
 const messagesContainer = ref<HTMLElement | null>(null);
+const aiAvailable = ref<boolean | null>(null);
+
+// Conversation history for multi-turn context
+const conversationHistory = ref<ConversationMessage[]>([]);
 
 // Quick actions for common tasks
 const quickActions = [
@@ -52,19 +72,24 @@ const quickActions = [
   { label: 'Add Element', icon: '➕', prompt: 'Help me add a new submodel element.' },
 ];
 
-// System context for the AI
+// System context display for the user
 const systemContext = computed(() => {
   if (!isLoaded.value) {
     return 'No document is currently loaded.';
   }
-  return `Working with AAS document: ${filename.value || 'Untitled'}`;
+  return `Working with: ${filename.value || 'Untitled'}`;
 });
 
+/**
+ * Send a message to the AI assistant
+ */
 async function sendMessage(content?: string) {
   const messageContent = content || inputValue.value.trim();
   if (!messageContent || isProcessing.value) return;
 
   inputValue.value = '';
+
+  // Add user message to display
   const userMessage: Message = {
     id: `msg-${Date.now()}`,
     role: 'user',
@@ -89,12 +114,59 @@ async function sendMessage(content?: string) {
   isProcessing.value = true;
 
   try {
-    // Process the message and determine what tools to call
-    const response = await processUserMessage(messageContent, assistantMessage);
-    assistantMessage.content = response;
-    assistantMessage.pending = false;
+    // Call the ai_chat tool
+    const result = await mcpService.callTool('ai_chat', {
+      message: messageContent,
+      conversationHistory: conversationHistory.value,
+    });
+
+    if (result.success) {
+      const data = result.data as {
+        response: string;
+        toolCalls?: ToolCall[];
+        usage?: { inputTokens: number; outputTokens: number };
+      };
+
+      assistantMessage.content = data.response;
+      assistantMessage.toolCalls = data.toolCalls;
+      assistantMessage.pending = false;
+      aiAvailable.value = true;
+
+      // Update conversation history for multi-turn
+      conversationHistory.value.push({
+        role: 'user',
+        content: messageContent,
+      });
+      conversationHistory.value.push({
+        role: 'assistant',
+        content: data.response,
+        toolCalls: data.toolCalls,
+      });
+
+      // Check if any tool calls generated pending patches for approval
+      if (data.toolCalls) {
+        for (const call of data.toolCalls) {
+          if (call.result && typeof call.result === 'object') {
+            const resultObj = call.result as Record<string, unknown>;
+            if (resultObj.pendingPatches && Array.isArray(resultObj.pendingPatches)) {
+              emit('suggestion', resultObj.pendingPatches);
+            }
+          }
+        }
+      }
+    } else {
+      // Check if it's an API key error
+      if (result.error?.includes('ANTHROPIC_API_KEY')) {
+        aiAvailable.value = false;
+        assistantMessage.content = getFallbackHelpMessage(result.error);
+      } else {
+        assistantMessage.content = `Error: ${result.error}`;
+      }
+      assistantMessage.pending = false;
+    }
   } catch (error) {
-    assistantMessage.content = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    assistantMessage.content = `Connection error: ${errorMessage}`;
     assistantMessage.pending = false;
   } finally {
     isProcessing.value = false;
@@ -102,58 +174,65 @@ async function sendMessage(content?: string) {
   }
 }
 
-async function processUserMessage(content: string, assistantMessage: Message): Promise<string> {
-  const lowerContent = content.toLowerCase();
+/**
+ * Get fallback help message when AI is not available
+ */
+function getFallbackHelpMessage(error?: string): string {
+  return `⚠️ **AI Assistant Unavailable**
 
-  // Pattern matching for common intents
-  if (lowerContent.includes('validate') || lowerContent.includes('check')) {
-    return await handleValidation(assistantMessage);
-  }
+${error ? `_${error}_\n\n` : ''}The AI backend is not configured. You can still use the following tools directly:
 
-  if (lowerContent.includes('fix') || lowerContent.includes('repair')) {
-    return await handleAutoFix(assistantMessage);
-  }
+**Available Commands** (type in chat):
+- "validate" - Check document for errors
+- "fix" - Auto-fix validation issues
+- "summary" - Get document overview
+- "list submodels" - Show all submodels
 
-  if (lowerContent.includes('summar') || lowerContent.includes('overview')) {
-    return await handleSummary(assistantMessage);
-  }
+Or use the quick action buttons below.
 
-  if (lowerContent.includes('list') && lowerContent.includes('submodel')) {
-    return await handleListSubmodels(assistantMessage);
-  }
-
-  if (lowerContent.includes('help')) {
-    return getHelpMessage();
-  }
-
-  // Default: provide helpful guidance
-  return `I can help you with:
-- **Validate**: Check your document for errors
-- **Fix**: Automatically fix validation issues
-- **Summarize**: Get an overview of the document
-- **List submodels**: See all submodels
-
-Try asking something like "validate the document" or "fix any errors".`;
+_To enable full AI features, set the \`ANTHROPIC_API_KEY\` environment variable on the server._`;
 }
 
-async function handleValidation(assistantMessage: Message): Promise<string> {
+/**
+ * Fallback processing for when AI is unavailable
+ * Uses the old pattern-matching approach
+ */
+async function processFallbackMessage(content: string, assistantMessage: Message): Promise<void> {
+  const lowerContent = content.toLowerCase();
+
+  if (lowerContent.includes('validate') || lowerContent.includes('check')) {
+    await handleValidationFallback(assistantMessage);
+  } else if (lowerContent.includes('fix') || lowerContent.includes('repair')) {
+    await handleAutoFixFallback(assistantMessage);
+  } else if (lowerContent.includes('summar') || lowerContent.includes('overview')) {
+    await handleSummaryFallback(assistantMessage);
+  } else if (lowerContent.includes('list') && lowerContent.includes('submodel')) {
+    await handleListSubmodelsFallback(assistantMessage);
+  } else {
+    assistantMessage.content = getFallbackHelpMessage();
+  }
+  assistantMessage.pending = false;
+}
+
+/**
+ * Fallback validation handler
+ */
+async function handleValidationFallback(assistantMessage: Message): Promise<void> {
   if (!isLoaded.value) {
-    return 'Please load a document first to run validation.';
+    assistantMessage.content = 'Please load a document first.';
+    return;
   }
 
-  const toolCall: ToolCall = {
-    name: 'validate_fast',
-    args: {},
-    status: 'pending',
-  };
+  const toolCall: ToolCall = { name: 'validate_fast', input: {} };
   assistantMessage.toolCalls = [toolCall];
 
   const result = await mcpService.callTool('validate_fast', {});
   toolCall.result = result.data;
-  toolCall.status = result.success ? 'success' : 'error';
+  toolCall.success = result.success;
 
   if (!result.success) {
-    return `Validation failed: ${result.error}`;
+    assistantMessage.content = `Validation failed: ${result.error}`;
+    return;
   }
 
   const data = result.data as {
@@ -161,227 +240,163 @@ async function handleValidation(assistantMessage: Message): Promise<string> {
     errorCount: number;
     warningCount: number;
     errors?: Array<{ path: string; message: string }>;
-    warnings?: Array<{ path: string; message: string }>;
   };
 
   if (data.valid) {
-    return `✅ **Document is valid!**\n\nNo errors found. ${data.warningCount > 0 ? `There are ${data.warningCount} warning(s) to review.` : ''}`;
-  }
-
-  let response = `❌ **Validation found ${data.errorCount} error(s)** and ${data.warningCount} warning(s).\n\n`;
-
-  if (data.errors && data.errors.length > 0) {
-    response += '**Errors:**\n';
-    for (const error of data.errors.slice(0, 5)) {
-      response += `- \`${error.path}\`: ${error.message}\n`;
+    assistantMessage.content = `✅ **Document is valid!**\n\nNo errors found.${data.warningCount > 0 ? ` ${data.warningCount} warning(s) to review.` : ''}`;
+  } else {
+    let response = `❌ **Found ${data.errorCount} error(s)** and ${data.warningCount} warning(s).\n\n`;
+    if (data.errors?.length) {
+      response += '**Errors:**\n';
+      for (const err of data.errors.slice(0, 5)) {
+        response += `- \`${err.path}\`: ${err.message}\n`;
+      }
+      if (data.errors.length > 5) {
+        response += `\n...and ${data.errors.length - 5} more.\n`;
+      }
     }
-    if (data.errors.length > 5) {
-      response += `\n...and ${data.errors.length - 5} more.\n`;
-    }
+    assistantMessage.content = response;
   }
-
-  response += '\nWould you like me to try to **fix** these automatically?';
-  return response;
 }
 
-async function handleAutoFix(assistantMessage: Message): Promise<string> {
+/**
+ * Fallback auto-fix handler
+ */
+async function handleAutoFixFallback(assistantMessage: Message): Promise<void> {
   if (!isLoaded.value) {
-    return 'Please load a document first.';
+    assistantMessage.content = 'Please load a document first.';
+    return;
   }
 
-  // First validate to get errors
-  const validateCall: ToolCall = {
-    name: 'validate_fast',
-    args: {},
-    status: 'pending',
-  };
+  // First validate
+  const validateCall: ToolCall = { name: 'validate_fast', input: {} };
   assistantMessage.toolCalls = [validateCall];
 
   const validation = await mcpService.callTool('validate_fast', {});
   validateCall.result = validation.data;
-  validateCall.status = validation.success ? 'success' : 'error';
+  validateCall.success = validation.success;
 
   if (!validation.success) {
-    return `Failed to validate: ${validation.error}`;
+    assistantMessage.content = `Validation failed: ${validation.error}`;
+    return;
   }
 
   const validationData = validation.data as { errors?: unknown[]; valid: boolean };
   if (validationData.valid || !validationData.errors?.length) {
-    return '✅ No errors to fix! The document is already valid.';
+    assistantMessage.content = '✅ No errors to fix!';
+    return;
   }
 
   // Run auto-fix
-  const fixCall: ToolCall = {
-    name: 'validate_auto_fix',
-    args: { errors: validationData.errors },
-    status: 'pending',
-  };
+  const fixCall: ToolCall = { name: 'validate_auto_fix', input: { errors: validationData.errors } };
   assistantMessage.toolCalls.push(fixCall);
 
-  const fixResult = await mcpService.callTool('validate_auto_fix', {
-    errors: validationData.errors,
-  });
+  const fixResult = await mcpService.callTool('validate_auto_fix', { errors: validationData.errors });
   fixCall.result = fixResult.data;
-  fixCall.status = fixResult.success ? 'success' : 'error';
+  fixCall.success = fixResult.success;
 
   if (!fixResult.success) {
-    return `Auto-fix failed: ${fixResult.error}`;
+    assistantMessage.content = `Auto-fix failed: ${fixResult.error}`;
+    return;
   }
 
   const fixData = fixResult.data as {
     summary: { fixable: number; unfixable: number };
     pendingPatches: unknown[];
-    remainingErrors: unknown[];
-    message: string;
   };
 
   let response = `🔧 **Auto-fix Analysis**\n\n`;
   response += `- Fixable: ${fixData.summary.fixable}\n`;
-  response += `- Requires manual fix: ${fixData.summary.unfixable}\n\n`;
+  response += `- Manual fix needed: ${fixData.summary.unfixable}\n\n`;
 
   if (fixData.pendingPatches.length > 0) {
-    response += `I've generated ${fixData.pendingPatches.length} fix(es). `;
-    response += 'Review them in the approval panel before applying.\n\n';
+    response += `Generated ${fixData.pendingPatches.length} fix(es). Review in approval panel.`;
     emit('suggestion', fixData.pendingPatches);
   }
 
-  if (fixData.remainingErrors.length > 0) {
-    response += `⚠️ ${fixData.remainingErrors.length} error(s) need manual attention.`;
-  }
-
-  return response;
+  assistantMessage.content = response;
 }
 
-async function handleSummary(assistantMessage: Message): Promise<string> {
+/**
+ * Fallback summary handler
+ */
+async function handleSummaryFallback(assistantMessage: Message): Promise<void> {
   if (!isLoaded.value) {
-    return 'Please load a document first.';
+    assistantMessage.content = 'Please load a document first.';
+    return;
   }
 
-  const toolCall: ToolCall = {
-    name: 'validate_summary',
-    args: {},
-    status: 'pending',
-  };
+  const toolCall: ToolCall = { name: 'validate_summary', input: {} };
   assistantMessage.toolCalls = [toolCall];
 
   const result = await mcpService.callTool('validate_summary', {});
   toolCall.result = result.data;
-  toolCall.status = result.success ? 'success' : 'error';
+  toolCall.success = result.success;
 
   if (!result.success) {
-    return `Failed to get summary: ${result.error}`;
+    assistantMessage.content = `Failed to get summary: ${result.error}`;
+    return;
   }
 
   const data = result.data as {
     aasCount: number;
     submodelCount: number;
-    validSubmodels: number;
     errorCount: number;
     warningCount: number;
-    submodelSummary: Array<{
-      idShort: string;
-      semanticId?: string;
-      valid: boolean;
-      errors: number;
-    }>;
   };
 
-  let response = `📊 **Document Summary**\n\n`;
-  response += `- **AAS**: ${data.aasCount}\n`;
-  response += `- **Submodels**: ${data.submodelCount} (${data.validSubmodels} valid)\n`;
-  response += `- **Errors**: ${data.errorCount}\n`;
-  response += `- **Warnings**: ${data.warningCount}\n\n`;
-
-  if (data.submodelSummary.length > 0) {
-    response += '**Submodels:**\n';
-    for (const sm of data.submodelSummary) {
-      const status = sm.valid ? '✅' : '❌';
-      response += `- ${status} ${sm.idShort}`;
-      if (sm.semanticId) {
-        const shortId = sm.semanticId.split('/').pop();
-        response += ` (${shortId})`;
-      }
-      if (!sm.valid) {
-        response += ` - ${sm.errors} error(s)`;
-      }
-      response += '\n';
-    }
-  }
-
-  return response;
+  assistantMessage.content = `📊 **Document Summary**\n\n- AAS: ${data.aasCount}\n- Submodels: ${data.submodelCount}\n- Errors: ${data.errorCount}\n- Warnings: ${data.warningCount}`;
 }
 
-async function handleListSubmodels(assistantMessage: Message): Promise<string> {
+/**
+ * Fallback list submodels handler
+ */
+async function handleListSubmodelsFallback(assistantMessage: Message): Promise<void> {
   if (!isLoaded.value) {
-    return 'Please load a document first.';
+    assistantMessage.content = 'Please load a document first.';
+    return;
   }
 
-  const toolCall: ToolCall = {
-    name: 'query_list_submodels',
-    args: {},
-    status: 'pending',
-  };
+  const toolCall: ToolCall = { name: 'query_list_submodels', input: {} };
   assistantMessage.toolCalls = [toolCall];
 
   const result = await mcpService.callTool('query_list_submodels', {});
   toolCall.result = result.data;
-  toolCall.status = result.success ? 'success' : 'error';
+  toolCall.success = result.success;
 
   if (!result.success) {
-    return `Failed to list submodels: ${result.error}`;
+    assistantMessage.content = `Failed to list submodels: ${result.error}`;
+    return;
   }
 
   const data = result.data as {
-    submodels: Array<{
-      idShort: string;
-      id: string;
-      semanticId?: string;
-      elementCount: number;
-    }>;
+    submodels: Array<{ idShort: string; id: string; semanticId?: string; elementCount: number }>;
   };
 
   if (!data.submodels?.length) {
-    return 'No submodels found in the document.';
+    assistantMessage.content = 'No submodels found.';
+    return;
   }
 
   let response = `📦 **Submodels** (${data.submodels.length})\n\n`;
   for (const sm of data.submodels) {
-    response += `### ${sm.idShort}\n`;
-    response += `- ID: \`${sm.id}\`\n`;
-    if (sm.semanticId) {
-      response += `- Semantic ID: \`${sm.semanticId}\`\n`;
-    }
+    response += `### ${sm.idShort}\n- ID: \`${sm.id}\`\n`;
+    if (sm.semanticId) response += `- Semantic ID: \`${sm.semanticId}\`\n`;
     response += `- Elements: ${sm.elementCount}\n\n`;
   }
-
-  return response;
+  assistantMessage.content = response;
 }
 
-function getHelpMessage(): string {
-  return `🤖 **AAS AI Assistant**
-
-I can help you work with your AAS documents. Try:
-
-**Validation**
-- "Validate the document"
-- "Check for errors"
-- "Fix any issues"
-
-**Queries**
-- "Summarize the document"
-- "List all submodels"
-
-**Editing**
-- "Add a new property"
-- "Help me create a submodel"
-
-Just type your request and I'll help!`;
-}
-
+/**
+ * Handle quick action button click
+ */
 function handleQuickAction(action: (typeof quickActions)[number]) {
   sendMessage(action.prompt);
 }
 
+/**
+ * Scroll messages container to bottom
+ */
 async function scrollToBottom() {
   await nextTick();
   if (messagesContainer.value) {
@@ -389,18 +404,50 @@ async function scrollToBottom() {
   }
 }
 
+/**
+ * Clear chat history
+ */
 function clearChat() {
   messages.value = [];
+  conversationHistory.value = [];
+  addWelcomeMessage();
 }
 
-// Add welcome message on mount
-if (messages.value.length === 0) {
+/**
+ * Add welcome message
+ */
+function addWelcomeMessage() {
   messages.value.push({
     id: 'welcome',
     role: 'assistant',
-    content: getHelpMessage(),
+    content: `🤖 **AAS AI Assistant**
+
+I can help you understand, validate, and edit your AAS documents. Try:
+
+- **Validate** - Check for errors and warnings
+- **Summarize** - Get an overview of the document structure
+- **Fix issues** - Automatically fix validation errors
+- **Ask questions** - "What submodels are in this document?"
+
+Just type your question or use the quick actions below!`,
     timestamp: new Date(),
   });
+}
+
+// Watch for ai_chat availability on first use
+watch(aiAvailable, (available) => {
+  if (available === false) {
+    // AI is not available, update welcome message
+    const welcomeMsg = messages.value.find((m) => m.id === 'welcome');
+    if (welcomeMsg) {
+      welcomeMsg.content = getFallbackHelpMessage();
+    }
+  }
+});
+
+// Initialize with welcome message
+if (messages.value.length === 0) {
+  addWelcomeMessage();
 }
 </script>
 
@@ -410,6 +457,9 @@ if (messages.value.length === 0) {
       <div class="header-title">
         <span class="ai-icon">🤖</span>
         <span>AI Assistant</span>
+        <span v-if="aiAvailable === false" class="ai-status offline" title="AI backend unavailable">
+          ⚠️
+        </span>
       </div>
       <button class="toggle-btn">
         {{ collapsed ? '▲' : '▼' }}
@@ -433,7 +483,7 @@ if (messages.value.length === 0) {
           <div v-if="message.toolCalls?.length" class="tool-calls">
             <div v-for="(call, index) in message.toolCalls" :key="index" class="tool-call">
               <span class="tool-icon">
-                {{ call.status === 'pending' ? '⏳' : call.status === 'success' ? '✅' : '❌' }}
+                {{ call.success === undefined ? '⏳' : call.success ? '✅' : '❌' }}
               </span>
               <span class="tool-name">{{ call.name }}</span>
             </div>
@@ -488,6 +538,7 @@ function formatMessage(content: string): string {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/`(.+?)`/g, '<code>$1</code>')
     .replace(/###\s+(.+)/g, '<h4>$1</h4>')
+    .replace(/_(.+?)_/g, '<em>$1</em>')
     .replace(/\n/g, '<br>');
 }
 
@@ -528,6 +579,11 @@ export { formatMessage };
 
 .ai-icon {
   font-size: 1.25rem;
+}
+
+.ai-status.offline {
+  font-size: 0.875rem;
+  opacity: 0.8;
 }
 
 .toggle-btn {
@@ -589,6 +645,11 @@ export { formatMessage };
 
 .message-content :deep(strong) {
   font-weight: 600;
+}
+
+.message-content :deep(em) {
+  font-style: italic;
+  opacity: 0.85;
 }
 
 .message-content :deep(h4) {

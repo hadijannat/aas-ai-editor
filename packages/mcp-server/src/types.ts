@@ -13,6 +13,8 @@ export interface ServerContext {
   config: ServerConfig;
   logger: Logger;
   sessionManager: SessionManager;
+  /** Tool registry for internal tool calls (set after transport handler creation) */
+  toolRegistry?: Map<string, ToolDefinition>;
 }
 
 /**

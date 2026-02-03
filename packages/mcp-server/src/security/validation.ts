@@ -180,6 +180,34 @@ export const toolSchemas = {
     filename: schemas.filename,
     analysisMode: z.enum(['ocr', 'vision', 'both']).optional(),
   }),
+
+  // AI tools
+  ai_chat: z.object({
+    message: z.string().min(1, 'Message cannot be empty').max(32000, 'Message too long'),
+    conversationHistory: z
+      .array(
+        z.object({
+          role: z.enum(['user', 'assistant']),
+          content: z.string(),
+          toolCalls: z
+            .array(
+              z.object({
+                name: z.string(),
+                input: z.record(z.unknown()),
+                result: z.unknown().optional(),
+              })
+            )
+            .optional(),
+        })
+      )
+      .max(100, 'Conversation history too long')
+      .optional(),
+    context: z
+      .object({
+        focusPath: schemas.jsonPointer.optional(),
+      })
+      .optional(),
+  }),
 };
 
 /**
