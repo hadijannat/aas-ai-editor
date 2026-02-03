@@ -1,6 +1,6 @@
 {
   "name": "@aas-ai-editor/web-ui",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Vue 3 SPA for AI-assisted AASX editing",
   "type": "module",
   "scripts": {
