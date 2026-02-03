@@ -1,6 +1,6 @@
 {
   "name": "aas-ai-editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "AI-enhanced, browser-based AASX editor with Claude/MCP integration",
   "license": "MIT",
