@@ -5,9 +5,22 @@
 
 MCP (Model Context Protocol) server for AI-assisted editing of Asset Administration Shell (AAS) packages. This server enables Claude and other AI assistants to read, validate, and modify AASX files through a standardized protocol.
 
+## What is AAS/AASX?
+
+**Asset Administration Shell (AAS)** is the standardized digital twin format for Industry 4.0. It provides a unified way to describe industrial assets (machines, devices, components) with:
+
+- **Submodels**: Structured data like Nameplate, Documentation, Technical Data
+- **Semantic IDs**: References to ECLASS, IDTA templates for interoperability
+- **Supplementary files**: PDFs, images, CAD files bundled in the package
+
+**AASX files** are ZIP-based packages containing AAS data (JSON/XML) plus attachments.
+
+Learn more: [Industrial Digital Twin Association (IDTA)](https://industrialdigitaltwin.org/)
+
 ## Features
 
-- **22 MCP Tools** for document lifecycle, querying, editing, and validation
+- **23 MCP Tools** for document lifecycle, querying, editing, validation, and AI chat
+- **AI-powered assistant** with automatic tool calling (requires Anthropic API key)
 - **Self-correcting validation** with automatic fix suggestions
 - **Patch-based editing** with full undo/redo support
 - **IDTA template validation** for industry-standard submodels
@@ -68,6 +81,50 @@ Or manually edit `~/.claude/claude_desktop_config.json`:
 }
 ```
 
+## Example Conversations
+
+Once connected, you can have natural conversations with Claude about your AASX files:
+
+```
+You: Load the file at /path/to/pump-device.aasx
+
+Claude: I've loaded the AASX file. It contains:
+- 1 Asset Administration Shell: "PumpAAS"
+- 3 Submodels: Nameplate, TechnicalData, Documentation
+- 47 total elements
+
+You: What's the manufacturer name?
+
+Claude: Looking at the Nameplate submodel, the ManufacturerName is "Bosch Rexroth AG".
+
+You: Change it to "Siemens AG"
+
+Claude: I'll update the ManufacturerName property. Here's the proposed change:
+- Path: /submodels/0/submodelElements/0/value
+- Old value: "Bosch Rexroth AG"
+- New value: "Siemens AG"
+
+[Change applied]
+
+You: Validate the document
+
+Claude: Running validation... Found 2 issues:
+1. Warning: Missing semanticId on Property "CustomField"
+2. Error: Invalid date format in "ManufacturingDate"
+
+You: Fix these issues automatically
+
+Claude: I'll generate fixes for these issues:
+1. Added semanticId reference to CustomField
+2. Corrected date format to ISO 8601
+
+[2 fixes applied]
+
+You: Save the file
+
+Claude: Document saved to /path/to/pump-device.aasx
+```
+
 ## Claude Desktop Integration
 
 Add to your Claude Desktop configuration file:
@@ -115,14 +172,44 @@ Add to your Claude Desktop configuration file:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MCP_PORT` | Server port | `3001` |
-| `MCP_API_KEY` | Single API key for authentication | - |
+| `ANTHROPIC_API_KEY` | Anthropic API key for AI features | - |
+| `MCP_SERVER_PORT` | Server port | `3001` |
+| `MCP_SERVER_HOST` | Server host binding | `0.0.0.0` |
+| `MCP_API_KEY` | Single API key for client authentication | - |
 | `MCP_API_KEYS` | Comma-separated API keys | - |
 | `MCP_ALLOWED_PATHS` | Allowed directories for file operations | - |
+| `MCP_SESSION_TIMEOUT_MS` | Session timeout in milliseconds | `1800000` |
+| `AI_MODEL` | Claude model to use | `claude-sonnet-4-20250514` |
+| `AI_MAX_TOKENS` | Maximum response tokens | `4096` |
 | `CORS_ALLOWED_ORIGINS` | Allowed CORS origins | `http://localhost:5173` |
 | `NODE_ENV` | Environment mode | `development` |
-| `RATE_LIMIT_MAX` | Max requests per minute | `100` |
-| `TRUST_PROXY` | Trust X-Forwarded-For header | `false` |
+
+### Anthropic API Key
+
+The AI chat feature requires an Anthropic API key. You can provide it in three ways:
+
+1. **Environment variable** (recommended for servers):
+   ```bash
+   ANTHROPIC_API_KEY=sk-ant-... npx @aas-ai-editor/mcp-server
+   ```
+
+2. **Claude Desktop config**:
+   ```json
+   {
+     "mcpServers": {
+       "aas-editor": {
+         "env": { "ANTHROPIC_API_KEY": "sk-ant-..." }
+       }
+     }
+   }
+   ```
+
+3. **Request header** (for web clients):
+   ```
+   X-Anthropic-Api-Key: sk-ant-...
+   ```
+
+Get your API key at: https://console.anthropic.com/settings/keys
 
 ## Available Tools
 
@@ -153,6 +240,9 @@ Add to your Claude Desktop configuration file:
 - `validate_summary` - Overview of validation status
 - `validate_template` - IDTA template compliance check
 - `validate_auto_fix` - Generate patches to fix validation errors
+
+### AI Tools
+- `ai_chat` - Claude-powered assistant with automatic tool calling
 
 ## Security
 
@@ -218,10 +308,29 @@ MCP_ALLOWED_PATHS=/Users/yourname/documents,/tmp npx @aas-ai-editor/mcp-server
 
 Deep validation requires the Python validation service. For standalone use, `validate_fast` provides structural validation without additional dependencies.
 
+## Web UI
+
+For a visual editing experience, use the companion web application:
+
+```bash
+# Clone and run
+git clone https://github.com/hadijannat/aas-ai-editor.git
+cd aas-ai-editor
+pnpm install
+pnpm dev
+```
+
+Then open http://localhost:5173 for:
+- Visual tree editor for AAS documents
+- AI chat sidebar for intelligent assistance
+- Diff viewer for reviewing changes
+- Settings page to configure your API key
+
 ## Related Packages
 
 - [`@aas-ai-editor/core`](https://www.npmjs.com/package/@aas-ai-editor/core) - Core AASX parsing and patch operations
-- [AAS AI Editor](https://github.com/hadijannat/aas-ai-editor) - Full application with web UI
+- [`@aas-ai-editor/web-ui`](https://www.npmjs.com/package/@aas-ai-editor/web-ui) - Vue 3 web application
+- [AAS AI Editor](https://github.com/hadijannat/aas-ai-editor) - Full monorepo with all packages
 
 ## License
 
