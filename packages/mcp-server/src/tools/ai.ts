@@ -246,16 +246,16 @@ const aiChat: ToolDefinition = {
         focusPath?: string;
       };
     };
-    const { server, session, logger } = context;
+    const { server, session, logger, anthropicApiKey } = context;
 
-    // Check for API key
-    const apiKey = server.config.ai.apiKey;
+    // Check for API key - prefer request header, fall back to server config
+    const apiKey = anthropicApiKey || server.config.ai.apiKey;
     if (!apiKey) {
       return {
         success: false,
         error:
-          'AI features require ANTHROPIC_API_KEY to be set. ' +
-          'Please set this environment variable to enable AI assistance.',
+          'AI features require an Anthropic API key. ' +
+          'Set your API key in Settings or configure ANTHROPIC_API_KEY on the server.',
       };
     }
 

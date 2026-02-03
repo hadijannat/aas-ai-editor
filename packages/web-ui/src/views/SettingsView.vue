@@ -1,15 +1,82 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 const mcpServerUrl = ref(import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:3001');
 const theme = ref<'light' | 'dark' | 'system'>('system');
 const autoValidate = ref(true);
 const showApprovalTiers = ref(true);
+
+// AI Configuration
+const anthropicApiKey = ref('');
+const showApiKey = ref(false);
+const apiKeyStatus = ref<'unchecked' | 'valid' | 'invalid'>('unchecked');
+
+// Load saved settings from localStorage
+onMounted(() => {
+  const savedApiKey = localStorage.getItem('anthropic_api_key');
+  if (savedApiKey) {
+    anthropicApiKey.value = savedApiKey;
+    apiKeyStatus.value = 'valid'; // Assume valid if previously saved
+  }
+});
+
+const saveApiKey = () => {
+  if (anthropicApiKey.value.trim()) {
+    localStorage.setItem('anthropic_api_key', anthropicApiKey.value.trim());
+    apiKeyStatus.value = 'valid';
+  } else {
+    localStorage.removeItem('anthropic_api_key');
+    apiKeyStatus.value = 'unchecked';
+  }
+};
+
+const clearApiKey = () => {
+  anthropicApiKey.value = '';
+  localStorage.removeItem('anthropic_api_key');
+  apiKeyStatus.value = 'unchecked';
+};
 </script>
 
 <template>
   <div class="settings-view">
     <h1>Settings</h1>
+
+    <section class="settings-section">
+      <h2>AI Configuration</h2>
+
+      <div class="setting-row">
+        <label for="api-key">Anthropic API Key</label>
+        <div class="api-key-input">
+          <input
+            id="api-key"
+            v-model="anthropicApiKey"
+            :type="showApiKey ? 'text' : 'password'"
+            class="input"
+            placeholder="sk-ant-..."
+          />
+          <button
+            type="button"
+            class="btn btn-icon"
+            @click="showApiKey = !showApiKey"
+            :title="showApiKey ? 'Hide API key' : 'Show API key'"
+          >
+            {{ showApiKey ? '🙈' : '👁️' }}
+          </button>
+        </div>
+        <div class="api-key-actions">
+          <button class="btn btn-primary btn-sm" @click="saveApiKey">
+            Save Key
+          </button>
+          <button class="btn btn-secondary btn-sm" @click="clearApiKey">
+            Clear
+          </button>
+          <span v-if="apiKeyStatus === 'valid'" class="status-badge status-valid">✓ Saved</span>
+        </div>
+        <p class="setting-hint">
+          Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>
+        </p>
+      </div>
+    </section>
 
     <section class="settings-section">
       <h2>Connection</h2>
@@ -117,6 +184,56 @@ const showApprovalTiers = ref(true);
   border: 1px solid var(--color-border);
   border-radius: 0.25rem;
   font-size: 1rem;
+  flex: 1;
+}
+
+.api-key-input {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.api-key-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.btn-icon {
+  padding: 0.5rem;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-valid {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.setting-hint {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.5rem;
+}
+
+.setting-hint a {
+  color: var(--color-primary);
 }
 
 .radio-group {

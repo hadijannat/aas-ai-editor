@@ -36,6 +36,12 @@ async function callTool(
     headers['X-Session-Id'] = sessionId.value;
   }
 
+  // Add API key from localStorage if available
+  const apiKey = localStorage.getItem('anthropic_api_key');
+  if (apiKey) {
+    headers['X-Anthropic-Api-Key'] = apiKey;
+  }
+
   const response = await fetch(MCP_BASE_URL, {
     method: 'POST',
     headers,

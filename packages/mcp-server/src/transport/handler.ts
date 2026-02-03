@@ -109,6 +109,9 @@ export function createTransportHandler(context: ServerContext): TransportHandler
       // Route to handler
       let result: unknown;
 
+      // Extract Anthropic API key from request header if provided
+      const anthropicApiKey = req.headers['x-anthropic-api-key'] as string | undefined;
+
       switch (method) {
         case 'initialize':
           result = handleInitialize(params);
@@ -119,7 +122,7 @@ export function createTransportHandler(context: ServerContext): TransportHandler
           break;
 
         case 'tools/call':
-          result = await handleCallTool(params, session, context);
+          result = await handleCallTool(params, session, context, anthropicApiKey);
           break;
 
         case 'resources/list':
@@ -199,7 +202,8 @@ export function createTransportHandler(context: ServerContext): TransportHandler
   async function handleCallTool(
     params: { name: string; arguments?: Record<string, unknown> },
     session: ReturnType<typeof context.sessionManager.get>,
-    ctx: ServerContext
+    ctx: ServerContext,
+    anthropicApiKey?: string
   ) {
     const tool = tools.get(params.name);
     if (!tool) {
@@ -235,6 +239,7 @@ export function createTransportHandler(context: ServerContext): TransportHandler
       server: ctx,
       session,
       logger: ctx.logger.child({ tool: params.name }),
+      anthropicApiKey,
     };
 
     const result = await tool.handler(toolArgs, toolContext);

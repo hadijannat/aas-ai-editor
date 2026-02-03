@@ -143,6 +143,9 @@ export interface ToolContext {
 
   /** Logger scoped to this tool */
   logger: Logger;
+
+  /** Anthropic API key from request header (overrides server config) */
+  anthropicApiKey?: string;
 }
 
 /**
