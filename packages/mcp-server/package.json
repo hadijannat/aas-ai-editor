@@ -1,7 +1,6 @@
 {
   "name": "@aas-ai-editor/mcp-server",
   "version": "0.1.0",
-  "private": true,
   "description": "MCP Streamable HTTP server with Claude AI integration for AASX editing",
   "type": "module",
   "exports": {
@@ -12,8 +11,12 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "aas-mcp-server": "./dist/cli.js"
+  },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -22,10 +25,33 @@
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "ai",
+    "aas",
+    "asset-administration-shell",
+    "aasx",
+    "industry4.0",
+    "digital-twin"
+  ],
+  "author": "AAS AI Editor Contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/aas-ai-editor/aas-ai-editor#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aas-ai-editor/aas-ai-editor.git",
+    "directory": "packages/mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/aas-ai-editor/aas-ai-editor/issues"
   },
   "dependencies": {
-    "@aas-ai-editor/core": "workspace:*",
+    "@aas-ai-editor/core": "^0.1.0",
     "@anthropic-ai/sdk": "^0.30.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "cors": "^2.8.6",
