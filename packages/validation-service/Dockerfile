@@ -1,7 +1,7 @@
 # Validation Service Dockerfile
 # Python FastAPI service for deep AAS validation
 
-FROM python:3.11-slim AS base
+FROM python:3.14-slim AS base
 
 WORKDIR /app
 
