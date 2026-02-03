@@ -293,14 +293,14 @@ function parseAasXml(xml: string): Environment {
     ignoreAttributes: false,
     attributeNamePrefix: '@_',
     textNodeName: '#text',
-    // Handle arrays properly
+    // Handle arrays properly - NOTE: 'value' is NOT included here because it's
+    // context-dependent (array for MLP/SEC, string for Property)
     isArray: (name) => {
       const arrayElements = [
         'assetAdministrationShells',
         'submodels',
         'conceptDescriptions',
         'submodelElements',
-        'value',
         'keys',
         'specificAssetIds',
         'langStringSet',
@@ -451,56 +451,158 @@ function transformReference(xmlRef: unknown): Reference | undefined {
 function transformReferences(xmlRefs: unknown): Reference[] | undefined {
   if (!xmlRefs) return undefined;
   if (Array.isArray(xmlRefs)) {
-    return xmlRefs.map(r => transformReference(r)).filter(Boolean) as Reference[];
+    // Handle array of wrapper objects [{ reference: {...} }, ...] or direct references
+    return xmlRefs.map(item => {
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>;
+        // Check if this is a wrapper { reference: {...} }
+        const inner = obj.reference || obj['aas:reference'];
+        if (inner) {
+          return transformReference(inner);
+        }
+      }
+      return transformReference(item);
+    }).filter(Boolean) as Reference[];
   }
   const refs = xmlRefs as Record<string, unknown>;
   const refArray = refs.reference || refs['aas:reference'];
-  if (Array.isArray(refArray)) {
-    return refArray.map(r => transformReference(r)).filter(Boolean) as Reference[];
+  if (refArray) {
+    // Handle both array and single reference
+    const innerArray = Array.isArray(refArray) ? refArray : [refArray];
+    return innerArray.map(r => transformReference(r)).filter(Boolean) as Reference[];
   }
   return undefined;
 }
 
 function transformKeys(xmlKeys: unknown): Key[] {
   if (!xmlKeys) return [];
+
+  // Handle direct array of keys
   if (Array.isArray(xmlKeys)) {
-    return xmlKeys.map(k => ({
-      type: String((k as Record<string, unknown>).type || '') as KeyType,
-      value: String((k as Record<string, unknown>).value || ''),
-    }));
+    return xmlKeys.flatMap(item => {
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>;
+        // Check if this is a wrapper { key: {...} }
+        const inner = obj.key || obj['aas:key'];
+        if (inner) {
+          const innerArray = Array.isArray(inner) ? inner : [inner];
+          return innerArray.map(k => transformSingleKey(k));
+        }
+      }
+      return [transformSingleKey(item)];
+    });
   }
+
+  // Handle wrapper object { key: [...] or {...} }
   const keys = xmlKeys as Record<string, unknown>;
   const keyArray = keys.key || keys['aas:key'];
-  if (Array.isArray(keyArray)) {
-    return keyArray.map(k => ({
-      type: String((k as Record<string, unknown>).type || (k as Record<string, unknown>)['@_type'] || '') as KeyType,
-      value: String((k as Record<string, unknown>).value || (k as Record<string, unknown>)['#text'] || ''),
-    }));
+  if (keyArray) {
+    // Handle both array and single object
+    const innerArray = Array.isArray(keyArray) ? keyArray : [keyArray];
+    return innerArray.map(k => transformSingleKey(k));
   }
+
   return [];
+}
+
+/**
+ * Transform a single key from various XML formats
+ */
+function transformSingleKey(k: unknown): Key {
+  if (!k || typeof k !== 'object') {
+    return { type: '' as KeyType, value: String(k || '') };
+  }
+  const obj = k as Record<string, unknown>;
+  return {
+    type: String(obj.type || obj['@_type'] || '') as KeyType,
+    value: String(obj.value || obj['#text'] || ''),
+  };
 }
 
 function transformLangStringSet(xmlLss: unknown): LangStringSet | undefined {
   if (!xmlLss) return undefined;
+
+  // Handle direct array format - may contain wrapper objects or direct lang strings
   if (Array.isArray(xmlLss)) {
-    return xmlLss.map(ls => ({
-      language: String((ls as Record<string, unknown>).language || (ls as Record<string, unknown>)['@_language'] || ''),
-      text: String((ls as Record<string, unknown>).text || (ls as Record<string, unknown>)['#text'] || ''),
-    }));
+    return xmlLss.flatMap(item => {
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>;
+        // Check if this array item is a wrapper { langStringTextType: {...} }
+        const inner = obj.langStringTextType || obj['aas:langStringTextType'];
+        if (inner) {
+          // Inner can be an array or single object
+          const innerArray = Array.isArray(inner) ? inner : [inner];
+          return innerArray.map(ls => transformSingleLangString(ls));
+        }
+      }
+      // Direct lang string object
+      return [transformSingleLangString(item)];
+    });
   }
+
+  // Handle wrapper object format { langStringTextType: [...] or {...} }
+  if (typeof xmlLss === 'object') {
+    const obj = xmlLss as Record<string, unknown>;
+    const items = obj.langStringTextType || obj['aas:langStringTextType'];
+    if (items) {
+      // Handle both array and single object
+      const innerArray = Array.isArray(items) ? items : [items];
+      return innerArray.map(ls => transformSingleLangString(ls));
+    }
+
+    // Handle single lang string object without wrapper (e.g., { language: 'en', text: 'Hello' })
+    if ('language' in obj || '@_language' in obj || 'text' in obj || '#text' in obj) {
+      return [transformSingleLangString(obj)];
+    }
+  }
+
   return undefined;
+}
+
+/**
+ * Transform a single lang string from various XML formats
+ */
+function transformSingleLangString(ls: unknown): { language: string; text: string } {
+  if (!ls || typeof ls !== 'object') {
+    return { language: '', text: String(ls || '') };
+  }
+  const obj = ls as Record<string, unknown>;
+  return {
+    language: String(obj.language || obj['@_language'] || ''),
+    text: String(obj.text || obj['#text'] || ''),
+  };
 }
 
 function transformSubmodelElements(xmlSmes: unknown): SubmodelElement[] | undefined {
   if (!xmlSmes) return undefined;
   if (Array.isArray(xmlSmes)) {
-    return xmlSmes.map(transformSubmodelElement);
+    // Handle array with possible nested structures
+    // Case 1: [{ submodelElement: [{...}, {...}] }] - wrapper with array inside
+    // Case 2: [{ submodelElement: {...} }, { submodelElement: {...} }] - array of single wrappers
+    return xmlSmes.flatMap((item) => {
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>;
+        const inner = obj.submodelElement || obj['aas:submodelElement'];
+        if (inner) {
+          // Inner can be an array (multiple elements) or single object
+          if (Array.isArray(inner)) {
+            return inner.map(transformSubmodelElement);
+          }
+          return [transformSubmodelElement(inner)];
+        }
+      }
+      return [transformSubmodelElement(item)];
+    });
   }
   const smes = xmlSmes as Record<string, unknown>;
   // Handle wrapped array
   const smeArray = smes.submodelElement || smes['aas:submodelElement'];
   if (Array.isArray(smeArray)) {
     return smeArray.map(transformSubmodelElement);
+  }
+  // Handle single wrapped element
+  if (smeArray) {
+    return [transformSubmodelElement(smeArray)];
   }
   return undefined;
 }

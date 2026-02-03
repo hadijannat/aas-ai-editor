@@ -12,6 +12,7 @@ import {
   validateEnvironment,
   validateAgainstTemplate,
   createPatch,
+  applyPatches,
   ApprovalTier,
   type Environment,
   type Submodel,
@@ -792,17 +793,20 @@ const selfCorrectingLoop: ToolDefinition = {
     }
 
     const iterations: LoopIteration[] = [];
-    const currentEnv = session.documentState.environment as Environment;
+    const originalEnv = session.documentState.environment as Environment;
+    // Create a working copy for iteration - fixes are applied here for re-validation
+    // but the original environment is not modified until user approves patches
+    let workingEnv = structuredClone(originalEnv);
     let allGeneratedPatches: AasPatchOp[] = [];
     let totalFixesApplied = 0;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       logger.info({ attempt }, 'Running validation iteration');
 
-      // Step 1: Run validation
+      // Step 1: Run validation against working copy (which may have fixes applied)
       let validationTarget: Environment;
       if (submodelId) {
-        const submodel = currentEnv.submodels?.find(
+        const submodel = workingEnv.submodels?.find(
           (sm) => sm.id === submodelId || sm.idShort === submodelId
         );
         if (!submodel) {
@@ -814,7 +818,7 @@ const selfCorrectingLoop: ToolDefinition = {
           conceptDescriptions: [],
         };
       } else {
-        validationTarget = currentEnv;
+        validationTarget = workingEnv;
       }
 
       const validationResult = validateEnvironment(validationTarget);
@@ -864,7 +868,7 @@ const selfCorrectingLoop: ToolDefinition = {
           continue;
         }
 
-        const fix = generateFixPatch(error, categorization, currentEnv);
+        const fix = generateFixPatch(error, categorization, workingEnv);
         if (fix) {
           fixSuggestions.push(fix);
         } else {
@@ -877,13 +881,24 @@ const selfCorrectingLoop: ToolDefinition = {
         'Error categorization complete'
       );
 
-      // Step 3: Queue high-confidence fixes as pending operations (requires approval)
-      let fixesQueuedThisIteration = 0;
+      // Step 3: Apply fixes and queue for approval
+      let fixesAppliedThisIteration = 0;
       if (applyFixes && fixSuggestions.length > 0) {
         const highConfidenceFixes = fixSuggestions.filter((f) => f.confidence === 'high');
 
-        // Instead of direct mutation, add fixes to pending operations for approval
         for (const fix of highConfidenceFixes) {
+          // Apply fix to working copy for re-validation in next iteration
+          const patchResult = applyPatches(workingEnv, [fix.patch]);
+          if (patchResult.success && patchResult.result) {
+            workingEnv = patchResult.result;
+            fixesAppliedThisIteration++;
+            totalFixesApplied++;
+            logger.debug({ path: fix.patch.path }, 'Applied fix to working copy');
+          } else {
+            logger.warn({ path: fix.patch.path, error: patchResult.error }, 'Failed to apply fix');
+          }
+
+          // Queue for user approval (original environment is not modified)
           const operationId = `auto-fix-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           session.pendingOperations.push({
             id: operationId,
@@ -893,8 +908,6 @@ const selfCorrectingLoop: ToolDefinition = {
             reason: fix.explanation,
             createdAt: new Date(),
           });
-          fixesQueuedThisIteration++;
-          totalFixesApplied++; // Count as "applied" for iteration tracking
           logger.debug({ path: fix.patch.path, operationId }, 'Queued fix for approval');
         }
       }
@@ -907,7 +920,7 @@ const selfCorrectingLoop: ToolDefinition = {
         errorCount: errors.length,
         warningCount: validationResult.warnings.length,
         fixesGenerated: fixSuggestions.length,
-        fixesApplied: fixesQueuedThisIteration,
+        fixesApplied: fixesAppliedThisIteration,
         remainingErrors: unfixableErrors,
       });
 
@@ -917,9 +930,9 @@ const selfCorrectingLoop: ToolDefinition = {
         break;
       }
 
-      // If we queued no fixes this iteration, stop to avoid infinite loop
-      if (applyFixes && fixesQueuedThisIteration === 0) {
-        logger.warn('No fixes queued this iteration, stopping to avoid infinite loop');
+      // If we applied no fixes this iteration, stop to avoid infinite loop
+      if (applyFixes && fixesAppliedThisIteration === 0) {
+        logger.warn('No fixes applied this iteration, stopping to avoid infinite loop');
         break;
       }
     }

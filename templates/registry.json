@@ -31,7 +31,7 @@
       "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2",
       "source": "sources/technical-data-v1.2.json",
       "compiled": "compiled/technical-data-v1.2.compiled.json",
-      "description": "Technical specifications and characteristics",
+      "description": "Technical specifications and characteristics according to IDTA 02003-1-2",
       "category": "technical",
       "requiredElements": [
         "GeneralInformation",
@@ -49,7 +49,7 @@
       "semanticId": "https://admin-shell.io/idta/CarbonFootprint/CarbonFootprint/1/0",
       "source": "sources/carbon-footprint-v1.json",
       "compiled": "compiled/carbon-footprint-v1.compiled.json",
-      "description": "Product and transport carbon footprint information",
+      "description": "Product and transport carbon footprint information according to IDTA 02023-1-0",
       "category": "sustainability",
       "requiredElements": [
         "ProductCarbonFootprint"
@@ -65,7 +65,7 @@
       "semanticId": "https://admin-shell.io/ZVEI/HandoverDocumentation/1/2",
       "source": "sources/handover-documentation-v1.2.json",
       "compiled": "compiled/handover-documentation-v1.2.compiled.json",
-      "description": "Documentation handover for assets",
+      "description": "Documentation handover for assets according to IDTA 02004-1-2",
       "category": "documentation",
       "requiredElements": [
         "Document"

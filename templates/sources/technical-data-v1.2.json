@@ -1,0 +1,163 @@
+{
+  "id": "idta-technical-data",
+  "name": "Technical Data",
+  "version": "1.2",
+  "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2",
+  "description": "Technical specifications and characteristics according to IDTA 02003-1-2",
+  "sourceUrl": "https://github.com/admin-shell-io/submodel-templates/tree/main/published/Technical_Data",
+  "structure": {
+    "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2",
+    "elements": [
+      {
+        "idShort": "GeneralInformation",
+        "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/GeneralInformation/1/1",
+        "modelType": "SubmodelElementCollection",
+        "required": true,
+        "description": "General information about the product",
+        "elements": [
+          {
+            "idShort": "ManufacturerName",
+            "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ManufacturerName/1/1",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": true,
+            "description": "Legally valid designation of the natural or judicial person"
+          },
+          {
+            "idShort": "ManufacturerProductDesignation",
+            "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ManufacturerProductDesignation/1/1",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": true,
+            "description": "Product designation as given by the manufacturer"
+          },
+          {
+            "idShort": "ManufacturerArticleNumber",
+            "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ManufacturerArticleNumber/1/1",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false,
+            "description": "Unique product identifier of the manufacturer"
+          },
+          {
+            "idShort": "ManufacturerOrderCode",
+            "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ManufacturerOrderCode/1/1",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false,
+            "description": "Manufacturer specific product order code"
+          }
+        ]
+      },
+      {
+        "idShort": "TechnicalProperties",
+        "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/TechnicalProperties/1/1",
+        "modelType": "SubmodelElementCollection",
+        "required": true,
+        "description": "Technical data relevant for the product",
+        "elements": []
+      },
+      {
+        "idShort": "ProductClassifications",
+        "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassifications/1/1",
+        "modelType": "SubmodelElementCollection",
+        "required": false,
+        "description": "Product classifications by various classification systems",
+        "elements": [
+          {
+            "idShort": "ProductClassificationItem",
+            "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationItem/1/1",
+            "modelType": "SubmodelElementCollection",
+            "required": false,
+            "description": "Single product classification item",
+            "elements": [
+              {
+                "idShort": "ProductClassificationSystem",
+                "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassificationSystem/1/1",
+                "modelType": "Property",
+                "valueType": "xs:string",
+                "required": true,
+                "description": "Common name of the classification system"
+              },
+              {
+                "idShort": "ClassificationSystemVersion",
+                "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ClassificationSystemVersion/1/1",
+                "modelType": "Property",
+                "valueType": "xs:string",
+                "required": false,
+                "description": "Version of the classification system"
+              },
+              {
+                "idShort": "ProductClassId",
+                "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ProductClassId/1/1",
+                "modelType": "Property",
+                "valueType": "xs:string",
+                "required": true,
+                "description": "Class of the product within the classification system"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "idShort": "FurtherInformation",
+        "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/FurtherInformation/1/1",
+        "modelType": "SubmodelElementCollection",
+        "required": false,
+        "description": "Further information on the product",
+        "elements": [
+          {
+            "idShort": "TextStatement",
+            "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/TextStatement/1/1",
+            "modelType": "MultiLanguageProperty",
+            "required": false,
+            "description": "Text statement in multiple languages"
+          },
+          {
+            "idShort": "ValidDate",
+            "semanticId": "https://admin-shell.io/ZVEI/TechnicalData/ValidDate/1/1",
+            "modelType": "Property",
+            "valueType": "xs:date",
+            "required": false,
+            "description": "Date when the data was created or last updated"
+          }
+        ]
+      }
+    ]
+  },
+  "constraints": [
+    {
+      "type": "required",
+      "path": "GeneralInformation",
+      "description": "GeneralInformation collection is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "required",
+      "path": "GeneralInformation/ManufacturerName",
+      "description": "Manufacturer name is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "required",
+      "path": "GeneralInformation/ManufacturerProductDesignation",
+      "description": "Product designation is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "required",
+      "path": "TechnicalProperties",
+      "description": "TechnicalProperties collection is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "pattern",
+      "path": "FurtherInformation/ValidDate",
+      "params": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      },
+      "description": "Date must be in ISO format (YYYY-MM-DD)",
+      "autoFixable": false
+    }
+  ]
+}

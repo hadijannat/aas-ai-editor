@@ -1,0 +1,201 @@
+{
+  "id": "idta-carbon-footprint",
+  "name": "Carbon Footprint",
+  "version": "1.0",
+  "semanticId": "https://admin-shell.io/idta/CarbonFootprint/CarbonFootprint/1/0",
+  "description": "Product and transport carbon footprint information according to IDTA 02023-1-0",
+  "sourceUrl": "https://github.com/admin-shell-io/submodel-templates/tree/main/published/Carbon_Footprint",
+  "structure": {
+    "semanticId": "https://admin-shell.io/idta/CarbonFootprint/CarbonFootprint/1/0",
+    "elements": [
+      {
+        "idShort": "ProductCarbonFootprint",
+        "semanticId": "https://admin-shell.io/idta/CarbonFootprint/ProductCarbonFootprint/1/0",
+        "modelType": "SubmodelElementCollection",
+        "required": true,
+        "description": "Carbon footprint of the product",
+        "elements": [
+          {
+            "idShort": "PCFCalculationMethod",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/PCFCalculationMethod/1/0",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": true,
+            "description": "Calculation method used for PCF (e.g., GHG Protocol, ISO 14067)"
+          },
+          {
+            "idShort": "PCFCO2eq",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/PCFCO2eq/1/0",
+            "modelType": "Property",
+            "valueType": "xs:double",
+            "required": true,
+            "description": "Product Carbon Footprint value in kg CO2 equivalent"
+          },
+          {
+            "idShort": "PCFReferenceValueForCalculation",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/PCFReferenceValueForCalculation/1/0",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false,
+            "description": "Reference value for the calculation (e.g., per piece, per kg)"
+          },
+          {
+            "idShort": "PCFQuantityOfMeasureForCalculation",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/PCFQuantityOfMeasureForCalculation/1/0",
+            "modelType": "Property",
+            "valueType": "xs:double",
+            "required": false,
+            "description": "Quantity for the reference calculation"
+          },
+          {
+            "idShort": "PCFLifeCyclePhase",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/PCFLifeCyclePhase/1/0",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false,
+            "description": "Life cycle phase covered (e.g., cradle-to-gate, cradle-to-grave)"
+          },
+          {
+            "idShort": "PCFGoodsAddressHandover",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/PCFGoodsAddressHandover/1/0",
+            "modelType": "SubmodelElementCollection",
+            "required": false,
+            "description": "Address where goods are handed over",
+            "elements": [
+              {
+                "idShort": "Street",
+                "modelType": "Property",
+                "valueType": "xs:string",
+                "required": false
+              },
+              {
+                "idShort": "City",
+                "modelType": "Property",
+                "valueType": "xs:string",
+                "required": false
+              },
+              {
+                "idShort": "Country",
+                "modelType": "Property",
+                "valueType": "xs:string",
+                "required": false
+              }
+            ]
+          },
+          {
+            "idShort": "PublicationDate",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/PublicationDate/1/0",
+            "modelType": "Property",
+            "valueType": "xs:date",
+            "required": false,
+            "description": "Date when PCF was published or last updated"
+          },
+          {
+            "idShort": "ExpirationDate",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/ExpirationDate/1/0",
+            "modelType": "Property",
+            "valueType": "xs:date",
+            "required": false,
+            "description": "Date when PCF expires"
+          }
+        ]
+      },
+      {
+        "idShort": "TransportCarbonFootprint",
+        "semanticId": "https://admin-shell.io/idta/CarbonFootprint/TransportCarbonFootprint/1/0",
+        "modelType": "SubmodelElementCollection",
+        "required": false,
+        "description": "Carbon footprint of transport",
+        "elements": [
+          {
+            "idShort": "TCFCalculationMethod",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/TCFCalculationMethod/1/0",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": true,
+            "description": "Calculation method used for TCF"
+          },
+          {
+            "idShort": "TCFCO2eq",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/TCFCO2eq/1/0",
+            "modelType": "Property",
+            "valueType": "xs:double",
+            "required": true,
+            "description": "Transport Carbon Footprint value in kg CO2 equivalent"
+          },
+          {
+            "idShort": "TCFReferenceValueForCalculation",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/TCFReferenceValueForCalculation/1/0",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false,
+            "description": "Reference value for the calculation"
+          },
+          {
+            "idShort": "TCFTransportDistance",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/TCFTransportDistance/1/0",
+            "modelType": "Property",
+            "valueType": "xs:double",
+            "required": false,
+            "description": "Transport distance in km"
+          },
+          {
+            "idShort": "TCFProcessesPart",
+            "semanticId": "https://admin-shell.io/idta/CarbonFootprint/TCFProcessesPart/1/0",
+            "modelType": "Property",
+            "valueType": "xs:string",
+            "required": false,
+            "description": "Transport processes included in calculation"
+          }
+        ]
+      }
+    ]
+  },
+  "constraints": [
+    {
+      "type": "required",
+      "path": "ProductCarbonFootprint",
+      "description": "ProductCarbonFootprint collection is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "required",
+      "path": "ProductCarbonFootprint/PCFCalculationMethod",
+      "description": "PCF calculation method is mandatory",
+      "autoFixable": true
+    },
+    {
+      "type": "required",
+      "path": "ProductCarbonFootprint/PCFCO2eq",
+      "description": "PCF CO2 equivalent value is mandatory",
+      "autoFixable": false
+    },
+    {
+      "type": "pattern",
+      "path": "ProductCarbonFootprint/PublicationDate",
+      "params": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      },
+      "description": "Date must be in ISO format (YYYY-MM-DD)",
+      "autoFixable": false
+    },
+    {
+      "type": "pattern",
+      "path": "ProductCarbonFootprint/ExpirationDate",
+      "params": {
+        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+      },
+      "description": "Date must be in ISO format (YYYY-MM-DD)",
+      "autoFixable": false
+    },
+    {
+      "type": "range",
+      "path": "ProductCarbonFootprint/PCFCO2eq",
+      "params": {
+        "min": 0
+      },
+      "description": "CO2eq value must be non-negative",
+      "autoFixable": false
+    }
+  ]
+}

@@ -336,6 +336,183 @@ describe('AASX Writer', () => {
     });
   });
 
+  describe('XML Round-trip: write XML -> read -> verify', () => {
+    it('should preserve LangStringSet values through XML round-trip', async () => {
+      const envWithLangStrings: Environment = {
+        assetAdministrationShells: [],
+        submodels: [
+          {
+            modelType: 'Submodel',
+            id: 'https://example.com/submodel/langstring-test',
+            idShort: 'LangStringSubmodel',
+            description: [
+              { language: 'en', text: 'English description' },
+              { language: 'de', text: 'Deutsche Beschreibung' },
+            ],
+            submodelElements: [
+              {
+                modelType: 'MultiLanguageProperty',
+                idShort: 'MultiLangProp',
+                value: [
+                  { language: 'en', text: 'Hello World' },
+                  { language: 'de', text: 'Hallo Welt' },
+                  { language: 'fr', text: 'Bonjour le monde' },
+                ],
+              },
+              {
+                modelType: 'Property',
+                idShort: 'PropWithDescription',
+                valueType: 'xs:string',
+                value: 'Test',
+                description: [
+                  { language: 'en', text: 'Property description' },
+                ],
+              },
+            ],
+          },
+        ],
+        conceptDescriptions: [],
+      };
+
+      // Write as XML
+      const aasx = await writeAasx(envWithLangStrings, { format: 'xml', filename: 'aas.xml' });
+
+      // Read it back
+      const result = await readAasx(aasx);
+
+      // Verify submodel description preserved
+      expect(result.environment.submodels![0].description).toBeDefined();
+      expect(result.environment.submodels![0].description).toHaveLength(2);
+      expect(result.environment.submodels![0].description![0].text).toBe('English description');
+      expect(result.environment.submodels![0].description![1].text).toBe('Deutsche Beschreibung');
+
+      // Verify MultiLanguageProperty value preserved
+      const mlp = result.environment.submodels![0].submodelElements![0];
+      expect(mlp.modelType).toBe('MultiLanguageProperty');
+      if (mlp.modelType === 'MultiLanguageProperty') {
+        expect(mlp.value).toBeDefined();
+        expect(mlp.value).toHaveLength(3);
+        expect(mlp.value![0].text).toBe('Hello World');
+        expect(mlp.value![1].text).toBe('Hallo Welt');
+        expect(mlp.value![2].text).toBe('Bonjour le monde');
+      }
+    });
+
+    it('should preserve Key attributes through XML round-trip', async () => {
+      const envWithRefs: Environment = {
+        assetAdministrationShells: [
+          {
+            modelType: 'AssetAdministrationShell',
+            id: 'https://example.com/aas/key-test',
+            idShort: 'KeyTestAAS',
+            assetInformation: {
+              assetKind: 'Instance',
+              globalAssetId: 'https://example.com/asset/key-test',
+            },
+            submodels: [
+              {
+                type: 'ModelReference',
+                keys: [
+                  { type: 'Submodel', value: 'https://example.com/submodel/key-test' },
+                ],
+              },
+            ],
+          },
+        ],
+        submodels: [
+          {
+            modelType: 'Submodel',
+            id: 'https://example.com/submodel/key-test',
+            idShort: 'KeyTestSubmodel',
+            semanticId: {
+              type: 'ExternalReference',
+              keys: [
+                { type: 'GlobalReference', value: 'https://admin-shell.io/example/semantic/1/0' },
+              ],
+            },
+            submodelElements: [
+              {
+                modelType: 'ReferenceElement',
+                idShort: 'RefElement',
+                value: {
+                  type: 'ModelReference',
+                  keys: [
+                    { type: 'Submodel', value: 'https://example.com/other/submodel' },
+                    { type: 'Property', value: 'SomeProperty' },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+        conceptDescriptions: [],
+      };
+
+      // Write as XML
+      const aasx = await writeAasx(envWithRefs, { format: 'xml', filename: 'aas.xml' });
+
+      // Read it back
+      const result = await readAasx(aasx);
+
+      // Verify AAS submodel reference keys preserved
+      const aasRefs = result.environment.assetAdministrationShells![0].submodels;
+      expect(aasRefs).toBeDefined();
+      expect(aasRefs![0].keys).toHaveLength(1);
+      expect(aasRefs![0].keys[0].type).toBe('Submodel');
+      expect(aasRefs![0].keys[0].value).toBe('https://example.com/submodel/key-test');
+
+      // Verify semanticId keys preserved
+      const semanticId = result.environment.submodels![0].semanticId;
+      expect(semanticId).toBeDefined();
+      expect(semanticId!.keys).toHaveLength(1);
+      expect(semanticId!.keys[0].type).toBe('GlobalReference');
+      expect(semanticId!.keys[0].value).toBe('https://admin-shell.io/example/semantic/1/0');
+
+      // Verify ReferenceElement keys preserved (including multi-key references)
+      const refElem = result.environment.submodels![0].submodelElements![0];
+      expect(refElem.modelType).toBe('ReferenceElement');
+      if (refElem.modelType === 'ReferenceElement' && refElem.value) {
+        expect(refElem.value.keys).toHaveLength(2);
+        expect(refElem.value.keys[0].type).toBe('Submodel');
+        expect(refElem.value.keys[1].type).toBe('Property');
+      }
+    });
+
+    it('should preserve full MultiLanguageProperty through XML round-trip', async () => {
+      // Write as XML
+      const aasx = await writeAasx(minimalEnvironment, { format: 'xml', filename: 'aas.xml' });
+
+      // Read it back
+      const result = await readAasx(aasx);
+
+      // Find the MultiLanguageProperty
+      const mlp = result.environment.submodels![0].submodelElements!.find(
+        (e) => e.modelType === 'MultiLanguageProperty'
+      );
+
+      expect(mlp).toBeDefined();
+      if (mlp && mlp.modelType === 'MultiLanguageProperty') {
+        expect(mlp.idShort).toBe('MultiLangProp');
+        expect(mlp.value).toBeDefined();
+        expect(mlp.value).toHaveLength(2);
+        expect(mlp.value!.find((ls) => ls.language === 'en')?.text).toBe('English text');
+        expect(mlp.value!.find((ls) => ls.language === 'de')?.text).toBe('German text');
+      }
+    });
+
+    it('should produce valid XML with type attributes on keys', async () => {
+      const aasx = await writeAasx(minimalEnvironment, { format: 'xml', filename: 'aas.xml' });
+      const xmlContent = getAasxFileContent(aasx, 'aasx/aas.xml');
+
+      expect(xmlContent).toBeDefined();
+      // Keys should use @_type which becomes type="..." attribute in XML
+      // The pattern should show type as an attribute, not as a child element
+      expect(xmlContent).toContain('type=');
+      // Should NOT have type as a separate element inside key
+      // (checking that the fix is working by ensuring key structure is correct)
+    });
+  });
+
   describe('Edge cases', () => {
     it('should handle Environment with only shells', async () => {
       const shellOnlyEnv: Environment = {

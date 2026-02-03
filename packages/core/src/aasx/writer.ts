@@ -273,7 +273,7 @@ function buildXmlAssetAdministrationShells(
         ? {
             reference: shell.submodels.map((ref) => ({
               type: ref.type,
-              keys: { key: ref.keys.map((k) => ({ type: k.type, '#text': k.value })) },
+              keys: { key: ref.keys.map((k) => ({ '@_type': k.type, '#text': k.value })) },
             })),
           }
         : undefined,
@@ -297,7 +297,7 @@ function buildXmlSubmodels(submodels: Environment['submodels']): Record<string, 
       semanticId: sm.semanticId
         ? {
             type: sm.semanticId.type,
-            keys: { key: sm.semanticId.keys.map((k) => ({ type: k.type, '#text': k.value })) },
+            keys: { key: sm.semanticId.keys.map((k) => ({ '@_type': k.type, '#text': k.value })) },
           }
         : undefined,
       submodelElements: sm.submodelElements
@@ -319,7 +319,7 @@ function buildXmlSubmodelElement(sme: SubmodelElement): Record<string, unknown> 
     semanticId: sme.semanticId
       ? {
           type: sme.semanticId.type,
-          keys: { key: sme.semanticId.keys.map((k: Key) => ({ type: k.type, '#text': k.value })) },
+          keys: { key: sme.semanticId.keys.map((k: Key) => ({ '@_type': k.type, '#text': k.value })) },
         }
       : undefined,
     description: buildXmlLangStringSet(sme.description),
@@ -340,7 +340,7 @@ function buildXmlSubmodelElement(sme: SubmodelElement): Record<string, unknown> 
         value: sme.value
           ? {
               type: sme.value.type,
-              keys: { key: sme.value.keys.map((k: Key) => ({ type: k.type, '#text': k.value })) },
+              keys: { key: sme.value.keys.map((k: Key) => ({ '@_type': k.type, '#text': k.value })) },
             }
           : undefined,
       };

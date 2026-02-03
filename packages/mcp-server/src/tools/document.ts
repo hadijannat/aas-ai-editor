@@ -160,6 +160,18 @@ const saveDocument: ToolDefinition = {
       };
     }
 
+    // Prevent writing to virtual content:// paths (from browser uploads)
+    if (outputPath.startsWith('content://')) {
+      return {
+        success: false,
+        error: 'Cannot save to content:// path. Specify an explicit file path or use document_export for browser downloads.',
+        data: {
+          hint: 'Use the document_export tool to get base64 content for browser download, or provide an explicit output path.',
+          currentDocumentId: outputPath,
+        },
+      };
+    }
+
     logger.info({ outputPath }, 'Saving document');
 
     try {
