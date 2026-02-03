@@ -6,12 +6,25 @@
  */
 
 import type { TransportHandler } from '../transport/handler.js';
+import type { ToolDefinition } from '../types.js';
 import { documentTools } from './document.js';
 import { queryTools } from './query.js';
 import { editTools } from './edit.js';
 import { validateTools } from './validate.js';
 import { importTools } from './import.js';
 import { aiTools } from './ai.js';
+
+/**
+ * All tools combined for direct access (used by stdio transport)
+ */
+export const allTools: ToolDefinition[] = [
+  ...documentTools,
+  ...queryTools,
+  ...editTools,
+  ...validateTools,
+  ...importTools,
+  ...aiTools,
+];
 
 /**
  * Register all tools with the transport handler

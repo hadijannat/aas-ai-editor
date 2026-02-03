@@ -443,7 +443,7 @@ const templateRegistry: ResourceDefinition = {
   },
 };
 
-const allResources: ResourceDefinition[] = [
+export const allResources: ResourceDefinition[] = [
   documentState,
   environmentJson,
   pendingOperations,

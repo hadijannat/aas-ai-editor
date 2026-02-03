@@ -264,7 +264,7 @@ The output should be ready to add to an AAS Environment.`,
   },
 };
 
-const allPrompts: PromptDefinition[] = [
+export const allPrompts: PromptDefinition[] = [
   describeDocument,
   fixValidationErrors,
   extractFromDatasheet,
