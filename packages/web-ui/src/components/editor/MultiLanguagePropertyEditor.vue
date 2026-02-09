@@ -88,7 +88,9 @@ function removeLanguage(index: number) {
 }
 
 function updateText(index: number, text: string) {
-  localValue.value[index].text = text;
+  const item = localValue.value[index];
+  if (!item) return;
+  item.text = text;
   isEditing.value = true;
 }
 

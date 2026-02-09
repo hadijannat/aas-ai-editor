@@ -74,14 +74,15 @@ function triggerFileSelect() {
 
 function handleFileSelect(event: Event) {
   const input = event.target as HTMLInputElement;
-  if (input.files && input.files.length > 0) {
-    pendingFile.value = input.files[0];
-    // Auto-detect content type from file
-    if (pendingFile.value.type) {
-      localContentType.value = pendingFile.value.type;
-    }
-    isEditing.value = true;
+  const selectedFile = input.files?.item(0);
+  if (!selectedFile) return;
+
+  pendingFile.value = selectedFile;
+  // Auto-detect content type from file
+  if (selectedFile.type) {
+    localContentType.value = selectedFile.type;
   }
+  isEditing.value = true;
 }
 
 async function save() {
@@ -127,12 +128,20 @@ function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const result = reader.result as string;
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('Failed to read file: unexpected result type'));
+        return;
+      }
       // Remove data URL prefix (data:mime;base64,)
       const base64 = result.split(',')[1];
+      if (!base64) {
+        reject(new Error('Failed to read file: missing base64 payload'));
+        return;
+      }
       resolve(base64);
     };
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error('Failed to read file'));
     reader.readAsDataURL(file);
   });
 }

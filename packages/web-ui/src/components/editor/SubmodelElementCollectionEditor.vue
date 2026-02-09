@@ -76,6 +76,7 @@ function selectChild(index: number) {
   if (!elementPath || !props.element.value) return;
 
   const child = props.element.value[index];
+  if (!child) return;
   const childPath = `${elementPath}/value/${index}`;
 
   emit('select-child', childPath, child);

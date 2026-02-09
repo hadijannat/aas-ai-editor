@@ -88,17 +88,18 @@ export function describePathTarget(path: string): string {
   const segments = parsePath(path);
   if (segments.length === 0) return 'root';
 
-  const lastSeg = segments[segments.length - 1];
+  const lastSeg = segments.at(-1);
+  if (!lastSeg) return 'root';
 
   // Special case: appending to array with /-
   if (lastSeg === '-') {
-    const parentSeg = segments[segments.length - 2] || 'array';
+    const parentSeg = segments.at(-2) ?? 'array';
     return `new item in ${parentSeg}`;
   }
 
   // If last segment is a number, describe the indexed item
   if (/^\d+$/.test(lastSeg)) {
-    const parentSeg = segments[segments.length - 2] || 'array';
+    const parentSeg = segments.at(-2) ?? 'array';
     return `${parentSeg}[${lastSeg}]`;
   }
 

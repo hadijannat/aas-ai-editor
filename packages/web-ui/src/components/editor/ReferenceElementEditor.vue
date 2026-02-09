@@ -88,7 +88,9 @@ function removeKey(index: number) {
 }
 
 function updateKey(index: number, field: 'type' | 'value', newValue: string) {
-  localKeys.value[index][field] = newValue;
+  const key = localKeys.value[index];
+  if (!key) return;
+  key[field] = newValue;
   isEditing.value = true;
 }
 
