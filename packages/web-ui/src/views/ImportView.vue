@@ -6,37 +6,37 @@ import { useNotificationStore } from '@/stores/notification';
 const mcpService = useMcpService();
 const notificationStore = useNotificationStore();
 
-const importType = ref<'pdf' | 'spreadsheet' | 'image' | 'aas'>('pdf');
+type ImportType = 'pdf' | 'spreadsheet' | 'image' | 'aas';
+
+const ACCEPT_TYPES: Record<ImportType, string> = {
+  pdf: '.pdf',
+  spreadsheet: '.csv,.xlsx,.xls',
+  image: '.png,.jpg,.jpeg,.webp',
+  aas: '.aasx,.json',
+};
+
+const IMPORT_TOOLS: Record<ImportType, string> = {
+  pdf: 'import_pdf',
+  spreadsheet: 'import_spreadsheet',
+  image: 'import_image',
+  aas: 'import_aas',
+};
+
+const importType = ref<ImportType>('pdf');
 const file = ref<File | null>(null);
 const isImporting = ref(false);
 const importResult = ref<{ success: boolean; message: string; data?: unknown } | null>(null);
 
-const acceptTypes = computed(() => {
-  const types: Record<string, string> = {
-    pdf: '.pdf',
-    spreadsheet: '.csv,.xlsx,.xls',
-    image: '.png,.jpg,.jpeg,.webp',
-    aas: '.aasx,.json',
-  };
-  return types[importType.value];
-});
+const acceptTypes = computed(() => ACCEPT_TYPES[importType.value]);
 
-const toolName = computed(() => {
-  const tools: Record<string, string> = {
-    pdf: 'import_pdf',
-    spreadsheet: 'import_spreadsheet',
-    image: 'import_image',
-    aas: 'import_aas',
-  };
-  return tools[importType.value];
-});
+const toolName = computed(() => IMPORT_TOOLS[importType.value]);
 
 function handleFileSelect(event: Event) {
   const target = event.target as HTMLInputElement;
-  if (target.files?.length) {
-    file.value = target.files[0];
-    importResult.value = null;
-  }
+  const selectedFile = target.files?.item(0);
+  if (!selectedFile) return;
+  file.value = selectedFile;
+  importResult.value = null;
 }
 
 function clearFile() {
@@ -112,8 +112,16 @@ function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const result = reader.result as string;
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('Failed to read file: unexpected result type'));
+        return;
+      }
       const base64 = result.split(',')[1];
+      if (!base64) {
+        reject(new Error('Failed to read file: missing base64 payload'));
+        return;
+      }
       resolve(base64);
     };
     reader.onerror = () => reject(new Error('Failed to read file'));

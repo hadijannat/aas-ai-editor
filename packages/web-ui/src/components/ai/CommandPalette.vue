@@ -204,10 +204,8 @@ const filteredCommands = computed(() => {
 const groupedCommands = computed(() => {
   const groups: Record<string, Command[]> = {};
   for (const cmd of filteredCommands.value) {
-    if (!groups[cmd.category]) {
-      groups[cmd.category] = [];
-    }
-    groups[cmd.category].push(cmd);
+    const bucket = groups[cmd.category] ?? (groups[cmd.category] = []);
+    bucket.push(cmd);
   }
   return groups;
 });
