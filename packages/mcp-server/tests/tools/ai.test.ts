@@ -11,11 +11,13 @@ import type { Logger } from 'pino';
 // Mock the Anthropic SDK
 vi.mock('@anthropic-ai/sdk', () => {
   return {
-    default: vi.fn().mockImplementation(() => ({
-      messages: {
-        create: vi.fn(),
-      },
-    })),
+    default: vi.fn().mockImplementation(function MockAnthropicClient() {
+      return {
+        messages: {
+          create: vi.fn(),
+        },
+      };
+    }),
   };
 });
 
@@ -148,9 +150,11 @@ describe('AI Chat Tool', () => {
         usage: { input_tokens: 100, output_tokens: 50 },
       });
 
-      vi.mocked(Anthropic).mockImplementation(() => ({
-        messages: { create: mockCreate },
-      }));
+      vi.mocked(Anthropic).mockImplementation(function MockAnthropicClient() {
+        return {
+          messages: { create: mockCreate },
+        };
+      });
 
       const context = createMockContext({});
 
@@ -167,9 +171,11 @@ describe('AI Chat Tool', () => {
       const Anthropic = (await import('@anthropic-ai/sdk')).default as unknown as { new(): { messages: { create: ReturnType<typeof vi.fn> } } };
       const mockCreate = vi.fn().mockRejectedValue(new Error('Rate limit exceeded'));
 
-      vi.mocked(Anthropic).mockImplementation(() => ({
-        messages: { create: mockCreate },
-      }));
+      vi.mocked(Anthropic).mockImplementation(function MockAnthropicClient() {
+        return {
+          messages: { create: mockCreate },
+        };
+      });
 
       const context = createMockContext({});
 
@@ -206,9 +212,11 @@ describe('AI Chat Tool', () => {
           usage: { input_tokens: 150, output_tokens: 30 },
         });
 
-      vi.mocked(Anthropic).mockImplementation(() => ({
-        messages: { create: mockCreate },
-      }));
+      vi.mocked(Anthropic).mockImplementation(function MockAnthropicClient() {
+        return {
+          messages: { create: mockCreate },
+        };
+      });
 
       // Create a mock tool registry with validate_fast
       const toolRegistry = new Map<string, ToolDefinition>();
@@ -244,9 +252,11 @@ describe('AI Chat Tool', () => {
         usage: { input_tokens: 200, output_tokens: 50 },
       });
 
-      vi.mocked(Anthropic).mockImplementation(() => ({
-        messages: { create: mockCreate },
-      }));
+      vi.mocked(Anthropic).mockImplementation(function MockAnthropicClient() {
+        return {
+          messages: { create: mockCreate },
+        };
+      });
 
       const context = createMockContext({});
 
