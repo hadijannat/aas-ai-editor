@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@aas-ai-editor/core": "workspace:*",
-    "@anthropic-ai/sdk": "^0.30.0",
+    "@anthropic-ai/sdk": "^0.74.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "cors": "^2.8.6",
     "express": "^4.21.0",
