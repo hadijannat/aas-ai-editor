@@ -58,7 +58,7 @@ jobs:
         run: pnpm test
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./packages/*/coverage/lcov.info
           fail_ci_if_error: false
@@ -95,7 +95,7 @@ jobs:
         run: pytest --cov=src --cov-report=xml
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: packages/validation-service/coverage.xml
           fail_ci_if_error: false
