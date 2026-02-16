@@ -90,7 +90,9 @@ export async function readAasx(
   try {
     files = unzipSync(bytes);
   } catch (error) {
-    throw new Error(`Failed to unzip AASX file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to unzip AASX file: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+      cause: error,
+    });
   }
 
   // Parse [Content_Types].xml (optional but expected)
@@ -172,7 +174,10 @@ export async function readAasx(
     }
   } catch (error) {
     throw new Error(
-      `Failed to parse AAS file "${aasPath}": ${error instanceof Error ? error.message : 'Unknown error'}`
+      `Failed to parse AAS file "${aasPath}": ${error instanceof Error ? error.message : 'Unknown error'}`,
+      {
+        cause: error,
+      }
     );
   }
 
