@@ -166,7 +166,7 @@ export const toolSchemas = {
   // Import tools
   import_suggest_template: z.object({
     templateId: z.string().min(1, 'Template ID cannot be empty'),
-    prefillData: z.record(z.unknown()).optional(),
+    prefillData: z.record(z.string(), z.unknown()).optional(),
     includeOptional: z.boolean().optional(),
   }),
 
@@ -174,7 +174,7 @@ export const toolSchemas = {
     filePath: schemas.filePath.optional(),
     base64Content: schemas.base64Content.optional(),
     fileType: z.enum(['csv', 'xlsx', 'xls']).optional(),
-    mapping: z.record(z.string()).optional(),
+    mapping: z.record(z.string(), z.string()).optional(),
     headerRow: schemas.positiveInt.optional(),
     templateId: z.string().optional(),
   }),
@@ -213,7 +213,7 @@ export const toolSchemas = {
             .array(
               z.object({
                 name: z.string(),
-                input: z.record(z.unknown()),
+                input: z.record(z.string(), z.unknown()),
                 result: z.unknown().optional(),
               })
             )
@@ -269,7 +269,12 @@ export function createInputValidator(toolName: string) {
 
       return {
         valid: false,
-        errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+        errors: result.error.issues.map((issue) => {
+          const path = issue.path.length > 0 ? issue.path.join('.') : 'input';
+          const message =
+            issue.code === 'invalid_type' && issue.input === undefined ? 'Required' : issue.message;
+          return `${path}: ${message}`;
+        }),
       };
     },
     schema,
