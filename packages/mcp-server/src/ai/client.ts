@@ -341,7 +341,7 @@ IMPORTANT: Respond ONLY with valid JSON. No markdown code blocks, no explanation
       return JSON.parse(content) as T;
     } catch (error) {
       this.logger.error({ content: result.content, error }, 'Failed to parse JSON response');
-      throw new Error('AI response was not valid JSON');
+      throw new Error('AI response was not valid JSON', { cause: error });
     }
   }
 
