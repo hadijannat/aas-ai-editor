@@ -19,7 +19,7 @@
   "dependencies": {
     "@aas-ai-editor/core": "workspace:*",
     "@monaco-editor/loader": "^1.4.0",
-    "@vueuse/core": "^14.2.0",
+    "@vueuse/core": "^14.2.1",
     "monaco-editor": "^0.55.1",
     "pinia": "^2.2.0",
     "vue": "^3.5.0",
