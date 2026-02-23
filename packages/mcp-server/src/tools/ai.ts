@@ -10,8 +10,10 @@ import type {
   MessageParam,
   Tool,
   ToolUseBlock,
+  ToolUseBlockParam,
   ToolResultBlockParam,
-  ContentBlock,
+  ContentBlockParam,
+  TextBlock,
 } from '@anthropic-ai/sdk/resources/messages';
 import type { ToolDefinition, ToolResult, ToolContext, SessionData } from '../types.js';
 import type { Environment } from '@aas-ai-editor/core';
@@ -37,6 +39,19 @@ interface ConversationMessage {
     input: Record<string, unknown>;
     result?: unknown;
   }>;
+}
+
+const anthropicClientCache = new Map<string, Anthropic>();
+
+function getAnthropicClient(apiKey: string): Anthropic {
+  const cached = anthropicClientCache.get(apiKey);
+  if (cached) {
+    return cached;
+  }
+
+  const client = new Anthropic({ apiKey });
+  anthropicClientCache.set(apiKey, client);
+  return client;
 }
 
 /**
@@ -136,7 +151,7 @@ function convertHistoryToMessages(history: ConversationMessage[]): MessageParam[
     } else if (msg.role === 'assistant') {
       // If assistant message has tool calls, we need to reconstruct the tool use blocks
       if (msg.toolCalls && msg.toolCalls.length > 0) {
-        const contentBlocks: ContentBlock[] = [];
+        const contentBlocks: ContentBlockParam[] = [];
 
         // Add text content if present
         if (msg.content) {
@@ -151,7 +166,7 @@ function convertHistoryToMessages(history: ConversationMessage[]): MessageParam[
             id: `toolu_history_${i}`,
             name: toolCall.name,
             input: toolCall.input,
-          });
+          } satisfies ToolUseBlockParam);
         }
 
         messages.push({
@@ -262,8 +277,7 @@ const aiChat: ToolDefinition = {
     logger.info({ messageLength: message.length }, 'Processing AI chat message');
 
     try {
-      // Initialize Anthropic client
-      const anthropic = new Anthropic({ apiKey });
+      const anthropic = getAnthropicClient(apiKey);
 
       // Build system prompt with document context
       let systemPrompt = buildSystemPrompt(session);
@@ -399,7 +413,7 @@ const aiChat: ToolDefinition = {
 
       // Extract final text response
       const textContent = response.content
-        .filter((block): block is { type: 'text'; text: string } => block.type === 'text')
+        .filter((block): block is TextBlock => block.type === 'text')
         .map((block) => block.text)
         .join('\n');
 
