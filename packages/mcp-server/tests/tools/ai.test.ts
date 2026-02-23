@@ -27,6 +27,8 @@ import { aiTools } from '../../src/tools/ai.js';
 /**
  * Create a mock tool context for testing
  */
+let mockApiKeyCounter = 0;
+
 function createMockContext(overrides: Partial<{
   apiKey: string;
   documentLoaded: boolean;
@@ -34,7 +36,7 @@ function createMockContext(overrides: Partial<{
   toolRegistry: Map<string, ToolDefinition>;
 }>): ToolContext {
   const {
-    apiKey = 'test-api-key',
+    apiKey = `test-api-key-${++mockApiKeyCounter}`,
     documentLoaded = true,
     environment = {
       assetAdministrationShells: [],
@@ -242,6 +244,41 @@ describe('AI Chat Tool', () => {
       expect(result.data).toHaveProperty('toolCalls');
       expect((result.data as { toolCalls: unknown[] }).toolCalls).toHaveLength(1);
       expect((result.data as { toolCalls: Array<{ name: string }> }).toolCalls[0].name).toBe('validate_fast');
+
+      const secondCallArgs = mockCreate.mock.calls[1][0];
+      const secondCallMessages = secondCallArgs.messages as Array<{
+        role: string;
+        content: unknown;
+      }>;
+      const assistantToolMessage = secondCallMessages.find(
+        (message) =>
+          message.role === 'assistant' &&
+          Array.isArray(message.content) &&
+          message.content.some(
+            (block) =>
+              typeof block === 'object' &&
+              block !== null &&
+              'type' in block &&
+              (block as { type: string }).type === 'tool_use'
+          )
+      );
+      const toolResultMessage = secondCallMessages.find(
+        (message) =>
+          message.role === 'user' &&
+          Array.isArray(message.content) &&
+          message.content.some(
+            (block) =>
+              typeof block === 'object' &&
+              block !== null &&
+              'type' in block &&
+              'tool_use_id' in block &&
+              (block as { type: string }).type === 'tool_result' &&
+              (block as { tool_use_id: string }).tool_use_id === 'tool_1'
+          )
+      );
+
+      expect(assistantToolMessage).toBeDefined();
+      expect(toolResultMessage).toBeDefined();
     });
 
     it('should accept conversation history for multi-turn', async () => {
@@ -277,6 +314,79 @@ describe('AI Chat Tool', () => {
       // Verify conversation history was passed
       const callArgs = mockCreate.mock.calls[0][0];
       expect(callArgs.messages.length).toBeGreaterThan(1);
+    });
+
+    it('should reconstruct tool-use history into assistant and tool-result messages', async () => {
+      const Anthropic = (await import('@anthropic-ai/sdk')).default as unknown as { new(): { messages: { create: ReturnType<typeof vi.fn> } } };
+      const mockCreate = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'Done.' }],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 220, output_tokens: 40 },
+      });
+
+      vi.mocked(Anthropic).mockImplementation(function MockAnthropicClient() {
+        return {
+          messages: { create: mockCreate },
+        };
+      });
+
+      const context = createMockContext({});
+
+      const result = await aiChatTool.handler(
+        {
+          message: 'Continue from previous tool output',
+          conversationHistory: [
+            { role: 'user', content: 'Run validation please' },
+            {
+              role: 'assistant',
+              content: 'Running validation now.',
+              toolCalls: [
+                {
+                  name: 'validate_fast',
+                  input: { strict: true },
+                  result: { valid: true, warningCount: 0 },
+                },
+              ],
+            },
+          ],
+        },
+        context
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+
+      const callArgs = mockCreate.mock.calls[0][0];
+      const messages = callArgs.messages as Array<{ role: string; content: unknown }>;
+      const assistantHistory = messages.find(
+        (message) =>
+          message.role === 'assistant' &&
+          Array.isArray(message.content) &&
+          message.content.some(
+            (block) =>
+              typeof block === 'object' &&
+              block !== null &&
+              'type' in block &&
+              (block as { type: string }).type === 'tool_use'
+          )
+      );
+      const toolResultHistory = messages.find(
+        (message) =>
+          message.role === 'user' &&
+          Array.isArray(message.content) &&
+          message.content.some(
+            (block) =>
+              typeof block === 'object' &&
+              block !== null &&
+              'type' in block &&
+              (block as { type: string }).type === 'tool_result' &&
+              'tool_use_id' in block &&
+              (block as { tool_use_id: string }).tool_use_id === 'toolu_history_0'
+          )
+      );
+
+      expect(assistantHistory).toBeDefined();
+      expect(toolResultHistory).toBeDefined();
     });
   });
 });
