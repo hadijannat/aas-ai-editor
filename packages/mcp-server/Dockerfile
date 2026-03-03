@@ -42,6 +42,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/core/node_modules ./packages/core/node_modules
 COPY --from=builder /app/packages/mcp-server/node_modules ./packages/mcp-server/node_modules
 
+# Trim dependency sourcemaps from pdfjs-dist to reduce production image size.
+RUN find /app/node_modules/.pnpm -type f -path '*/pdfjs-dist@*/node_modules/pdfjs-dist/*' -name '*.map' -delete
+
 # Copy built files
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
 COPY --from=builder /app/packages/mcp-server/dist ./packages/mcp-server/dist
