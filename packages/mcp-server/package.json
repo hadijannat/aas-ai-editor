@@ -59,7 +59,7 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "mammoth": "^1.11.0",
-    "pdfjs-dist": "^5.4.624",
+    "pdfjs-dist": "^5.5.207",
     "pino": "^10.3.1",
     "pino-pretty": "^11.2.0",
     "uuid": "^10.0.0",
