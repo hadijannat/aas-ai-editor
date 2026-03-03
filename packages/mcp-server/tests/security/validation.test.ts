@@ -120,6 +120,36 @@ describe('Input Validation', () => {
       });
     });
 
+    describe('import_pdf', () => {
+      it('should validate correct base64 content with positive pages', () => {
+        const result = validateToolInput('import_pdf', {
+          base64Content: Buffer.from('fake-pdf').toString('base64'),
+          pages: [1, 2],
+          targetFields: ['ManufacturerName', 'SerialNumber'],
+        });
+        expect(result.valid).toBe(true);
+      });
+
+      it('should reject non-positive page numbers', () => {
+        const result = validateToolInput('import_pdf', {
+          base64Content: 'SGVsbG8=',
+          pages: [0],
+        });
+        expect(result.valid).toBe(false);
+        expect(result.errors).toBeDefined();
+        expect(result.errors?.some((err) => err.startsWith('pages.0:'))).toBe(true);
+      });
+
+      it('should reject invalid base64 content', () => {
+        const result = validateToolInput('import_pdf', {
+          base64Content: 'not valid base64!!!',
+        });
+        expect(result.valid).toBe(false);
+        expect(result.errors).toBeDefined();
+        expect(result.errors?.some((err) => err.startsWith('base64Content:'))).toBe(true);
+      });
+    });
+
     describe('validate_auto_fix', () => {
       it('should validate correct input', () => {
         const result = validateToolInput('validate_auto_fix', {
