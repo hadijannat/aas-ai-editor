@@ -34,7 +34,7 @@
     "@vue/tsconfig": "^0.9.0",
     "autoprefixer": "^10.4.27",
     "eslint-plugin-vue": "^10.8.0",
-    "globals": "^17.3.0",
+    "globals": "^17.4.0",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.1",
