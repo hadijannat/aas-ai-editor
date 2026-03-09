@@ -77,9 +77,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.3.3",
+    "@types/node": "^25.3.5",
     "@vitest/coverage-v8": "^4.0.18",
-    "eslint": "^10.0.2",
+    "eslint": "^10.0.3",
     "tsx": "^4.7.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.56.1",
