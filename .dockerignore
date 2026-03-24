@@ -1,0 +1,15 @@
+.git
+.github
+.turbo
+node_modules
+**/node_modules
+dist
+**/dist
+coverage
+**/coverage
+playwright-report
+test-results
+packages/web-ui/.vite
+packages/web-ui/.vite-temp
+tmp
+*.log
