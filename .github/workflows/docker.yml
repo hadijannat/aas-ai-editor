@@ -96,11 +96,13 @@ jobs:
         env:
           PLATFORM: ${{ matrix.platform }}
 
-      - name: Extract metadata for GHCR
-        id: meta-ghcr
+      - name: Extract metadata
+        id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
+          images: |
+            ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
+            ${{ env.DOCKERHUB_REGISTRY }}/${{ matrix.dockerhub }}
           tags: |
             type=ref,event=branch,suffix=-${{ steps.slug.outputs.arch }}
             type=ref,event=pr,suffix=-${{ steps.slug.outputs.arch }}
@@ -115,8 +117,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-ghcr.outputs.tags }}
-          labels: ${{ steps.meta-ghcr.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.name }}-${{ steps.slug.outputs.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}-${{ steps.slug.outputs.arch }}
 
@@ -164,13 +166,12 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata
+      - name: Extract metadata (bare tags for manifest names)
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: |
-            ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
-            ${{ env.DOCKERHUB_REGISTRY }}/${{ matrix.dockerhub }}
+          # Use a dummy image so outputs.tags gives us bare tag names
+          images: ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
@@ -179,6 +180,8 @@ jobs:
 
       - name: Create and push multi-arch manifests
         run: |
+          set -euo pipefail
+
           GHCR_IMAGE="${GHCR_REGISTRY}/${IMAGE_PREFIX}/${NAME}"
           DOCKERHUB_IMAGE="${DOCKERHUB_REGISTRY}/${DOCKERHUB}"
 
@@ -189,30 +192,46 @@ jobs:
             ARCH_SUFFIXES+=("${plat#*/}")
           done
 
-          # For each tag, create a manifest from the per-arch tags
-          while IFS= read -r TAG; do
-            [ -z "${TAG}" ] && continue
+          # Extract bare tag names from the full image:tag lines
+          # metadata-action outputs lines like "ghcr.io/org/repo/img:main"
+          # We strip the image prefix to get just the tag name
+          BARE_TAGS=()
+          while IFS= read -r FULL_TAG; do
+            [ -z "${FULL_TAG}" ] && continue
+            # Strip everything up to and including the last ':'
+            TAG_NAME="${FULL_TAG##*:}"
+            [ -n "${TAG_NAME}" ] && BARE_TAGS+=("${TAG_NAME}")
+          done <<< "${META_TAGS}"
 
-            # GHCR manifest
+          if [ ${#BARE_TAGS[@]} -eq 0 ]; then
+            echo "No tags to create manifests for"
+            exit 0
+          fi
+
+          echo "Tags to process: ${BARE_TAGS[*]}"
+          echo "Architectures: ${ARCH_SUFFIXES[*]}"
+
+          for TAG in "${BARE_TAGS[@]}"; do
+            # GHCR manifest: combine per-arch GHCR images
             GHCR_SOURCES=()
             for arch in "${ARCH_SUFFIXES[@]}"; do
               GHCR_SOURCES+=("${GHCR_IMAGE}:${TAG}-${arch}")
             done
             echo "Creating GHCR manifest: ${GHCR_IMAGE}:${TAG}"
-            docker buildx imagetools create -t "${GHCR_IMAGE}:${TAG}" "${GHCR_SOURCES[@]}" || true
+            docker buildx imagetools create -t "${GHCR_IMAGE}:${TAG}" "${GHCR_SOURCES[@]}"
 
-            # Docker Hub manifest (if configured)
+            # Docker Hub manifest: combine per-arch Docker Hub images
             if [ -n "${DOCKERHUB_USERNAME}" ] && [ -n "${DOCKERHUB_TOKEN}" ]; then
-              DOCKERHUB_SOURCES=()
+              DH_SOURCES=()
               for arch in "${ARCH_SUFFIXES[@]}"; do
-                DOCKERHUB_SOURCES+=("${GHCR_IMAGE}:${TAG}-${arch}")
+                DH_SOURCES+=("${DOCKERHUB_IMAGE}:${TAG}-${arch}")
               done
               echo "Creating Docker Hub manifest: ${DOCKERHUB_IMAGE}:${TAG}"
-              docker buildx imagetools create -t "${DOCKERHUB_IMAGE}:${TAG}" "${DOCKERHUB_SOURCES[@]}" || true
+              docker buildx imagetools create -t "${DOCKERHUB_IMAGE}:${TAG}" "${DH_SOURCES[@]}"
             fi
-          done <<< "${TAGS}"
+          done
         env:
           NAME: ${{ matrix.name }}
           DOCKERHUB: ${{ matrix.dockerhub }}
           PLATFORMS_CSV: ${{ matrix.platforms }}
-          TAGS: ${{ steps.meta.outputs.version }}
+          META_TAGS: ${{ steps.meta.outputs.tags }}
