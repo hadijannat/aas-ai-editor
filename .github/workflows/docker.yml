@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GHCR_REGISTRY: ghcr.io
   DOCKERHUB_REGISTRY: docker.io
@@ -14,9 +18,9 @@ env:
 
 jobs:
   build-images:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    name: Build (${{ matrix.name }}, ${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -25,30 +29,47 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
     strategy:
+      fail-fast: false
       matrix:
         include:
+          # mcp-server: amd64
           - name: mcp-server
             context: .
             dockerfile: packages/mcp-server/Dockerfile
             dockerhub: hadijannat/aas-mcp-server
-            platforms: linux/amd64,linux/arm64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          # mcp-server: arm64 (native runner, no QEMU)
+          - name: mcp-server
+            context: .
+            dockerfile: packages/mcp-server/Dockerfile
+            dockerhub: hadijannat/aas-mcp-server
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          # web-ui: amd64 only
           - name: web-ui
             context: .
             dockerfile: packages/web-ui/Dockerfile
             dockerhub: hadijannat/aas-web-ui
-            platforms: linux/amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          # validation-service: amd64
           - name: validation-service
             context: packages/validation-service
             dockerfile: packages/validation-service/Dockerfile
             dockerhub: hadijannat/aas-validation-service
-            platforms: linux/amd64,linux/arm64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          # validation-service: arm64 (native runner, no QEMU)
+          - name: validation-service
+            context: packages/validation-service
+            dockerfile: packages/validation-service/Dockerfile
+            dockerhub: hadijannat/aas-validation-service
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        if: contains(matrix.platforms, 'arm64')
-        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -69,38 +90,148 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata for GHCR
-        id: meta-ghcr
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
+      - name: Compute platform slug
+        id: slug
+        run: echo "arch=${PLATFORM#*/}" >> "$GITHUB_OUTPUT"
+        env:
+          PLATFORM: ${{ matrix.platform }}
 
-      - name: Extract metadata for Docker Hub
-        id: meta-dockerhub
-        if: env.DOCKERHUB_USERNAME != ''
+      - name: Extract metadata
+        id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.DOCKERHUB_REGISTRY }}/${{ matrix.dockerhub }}
+          images: |
+            ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
+            ${{ env.DOCKERHUB_REGISTRY }}/${{ matrix.dockerhub }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch,suffix=-${{ steps.slug.outputs.arch }}
+            type=ref,event=pr,suffix=-${{ steps.slug.outputs.arch }}
+            type=semver,pattern={{version}},suffix=-${{ steps.slug.outputs.arch }}
+            type=semver,pattern={{major}}.{{minor}},suffix=-${{ steps.slug.outputs.arch }}
+            type=sha,suffix=-${{ steps.slug.outputs.arch }}
 
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          platforms: ${{ matrix.platforms }}
+          platforms: ${{ matrix.platform }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-ghcr.outputs.tags }}
-          labels: ${{ steps.meta-ghcr.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.name }}-${{ steps.slug.outputs.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}-${{ steps.slug.outputs.arch }}
+
+  # Create multi-arch manifest lists combining per-platform images
+  create-manifests:
+    name: Manifest (${{ matrix.name }})
+    needs: build-images
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: mcp-server
+            dockerhub: hadijannat/aas-mcp-server
+            platforms: linux/amd64,linux/arm64
+          - name: web-ui
+            dockerhub: hadijannat/aas-web-ui
+            platforms: linux/amd64
+          - name: validation-service
+            dockerhub: hadijannat/aas-validation-service
+            platforms: linux/amd64,linux/arm64
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.DOCKERHUB_REGISTRY }}
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (bare tags for manifest names)
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          # Use a dummy image so outputs.tags gives us bare tag names
+          images: ${{ env.GHCR_REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.name }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Create and push multi-arch manifests
+        run: |
+          set -euo pipefail
+
+          GHCR_IMAGE="${GHCR_REGISTRY}/${IMAGE_PREFIX}/${NAME}"
+          DOCKERHUB_IMAGE="${DOCKERHUB_REGISTRY}/${DOCKERHUB}"
+
+          # Parse platforms into arch list
+          IFS=',' read -ra PLATFORMS <<< "${PLATFORMS_CSV}"
+          ARCH_SUFFIXES=()
+          for plat in "${PLATFORMS[@]}"; do
+            ARCH_SUFFIXES+=("${plat#*/}")
+          done
+
+          # Extract bare tag names from the full image:tag lines
+          # metadata-action outputs lines like "ghcr.io/org/repo/img:main"
+          # We strip the image prefix to get just the tag name
+          BARE_TAGS=()
+          while IFS= read -r FULL_TAG; do
+            [ -z "${FULL_TAG}" ] && continue
+            # Strip everything up to and including the last ':'
+            TAG_NAME="${FULL_TAG##*:}"
+            [ -n "${TAG_NAME}" ] && BARE_TAGS+=("${TAG_NAME}")
+          done <<< "${META_TAGS}"
+
+          if [ ${#BARE_TAGS[@]} -eq 0 ]; then
+            echo "No tags to create manifests for"
+            exit 0
+          fi
+
+          echo "Tags to process: ${BARE_TAGS[*]}"
+          echo "Architectures: ${ARCH_SUFFIXES[*]}"
+
+          for TAG in "${BARE_TAGS[@]}"; do
+            # GHCR manifest: combine per-arch GHCR images
+            GHCR_SOURCES=()
+            for arch in "${ARCH_SUFFIXES[@]}"; do
+              GHCR_SOURCES+=("${GHCR_IMAGE}:${TAG}-${arch}")
+            done
+            echo "Creating GHCR manifest: ${GHCR_IMAGE}:${TAG}"
+            docker buildx imagetools create -t "${GHCR_IMAGE}:${TAG}" "${GHCR_SOURCES[@]}"
+
+            # Docker Hub manifest: combine per-arch Docker Hub images
+            if [ -n "${DOCKERHUB_USERNAME}" ] && [ -n "${DOCKERHUB_TOKEN}" ]; then
+              DH_SOURCES=()
+              for arch in "${ARCH_SUFFIXES[@]}"; do
+                DH_SOURCES+=("${DOCKERHUB_IMAGE}:${TAG}-${arch}")
+              done
+              echo "Creating Docker Hub manifest: ${DOCKERHUB_IMAGE}:${TAG}"
+              docker buildx imagetools create -t "${DOCKERHUB_IMAGE}:${TAG}" "${DH_SOURCES[@]}"
+            fi
+          done
+        env:
+          NAME: ${{ matrix.name }}
+          DOCKERHUB: ${{ matrix.dockerhub }}
+          PLATFORMS_CSV: ${{ matrix.platforms }}
+          META_TAGS: ${{ steps.meta.outputs.tags }}
