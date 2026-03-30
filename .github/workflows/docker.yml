@@ -120,6 +120,7 @@ jobs:
             type=semver,pattern={{version}},suffix=-${{ steps.slug.outputs.arch }}
             type=semver,pattern={{major}}.{{minor}},suffix=-${{ steps.slug.outputs.arch }}
             type=sha,suffix=-${{ steps.slug.outputs.arch }}
+            type=raw,value=latest,enable={{is_default_branch}},suffix=-${{ steps.slug.outputs.arch }}
 
       - name: Build and push
         uses: docker/build-push-action@v7
