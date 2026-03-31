@@ -42,6 +42,9 @@ jobs:
     name: Test (Node.js)
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -58,18 +61,33 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm test -- -- --coverage
+
+      - name: Discover Node coverage reports
+        id: node-coverage
+        run: |
+          files=$(find packages -path '*/coverage/lcov.info' -print | paste -sd, -)
+          if [ -z "$files" ]; then
+            echo "No Node coverage reports found" >&2
+            exit 1
+          fi
+          echo "files=$files" >> "$GITHUB_OUTPUT"
 
       - name: Upload coverage
         uses: codecov/codecov-action@v6
         with:
-          files: ./packages/*/coverage/lcov.info
-          fail_ci_if_error: false
+          files: ${{ steps.node-coverage.outputs.files }}
+          disable_search: true
+          fail_ci_if_error: true
+          use_oidc: true
 
   test-python:
     name: Test (Python)
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: packages/validation-service
@@ -101,7 +119,9 @@ jobs:
         uses: codecov/codecov-action@v6
         with:
           files: packages/validation-service/coverage.xml
-          fail_ci_if_error: false
+          disable_search: true
+          fail_ci_if_error: true
+          use_oidc: true
 
   build:
     name: Build
